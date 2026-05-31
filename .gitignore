@@ -1,1 +1,6 @@
 .gemini
+.antigravitycli
+
+# Rust
+/target/
+**/*.rs.bk
