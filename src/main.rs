@@ -1,7 +1,7 @@
 mod app;
 mod ui;
 
-use std::io;
+use std::{io, time::Duration};
 use crossterm::{
     event::{self, Event, KeyCode, KeyEventKind},
     execute,
@@ -41,22 +41,40 @@ fn main() -> io::Result<()> {
 }
 
 fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, app: &mut App) -> io::Result<()> {
+    // Definimos un tick rate máximo de 250ms para que la UI sea muy responsiva
+    let tick_rate = Duration::from_millis(250);
+
     loop {
-        // Dibujamos la pantalla en cada iteración
         terminal.draw(|f| ui::render(f, app))?;
 
-        // Atrapamos eventos del teclado
-        if let Event::Key(key) = event::read()? {
-            // Solo reaccionamos si es presionar tecla, no soltarla (importante en Windows/algunas TTY)
-            if key.kind == KeyEventKind::Press {
-                match key.code {
-                    KeyCode::Char('q') => app.quit(),
-                    KeyCode::Right | KeyCode::Tab => app.next_tab(),
-                    KeyCode::Left | KeyCode::BackTab => app.previous_tab(),
-                    _ => {}
+        // event::poll espera hasta `tick_rate` a ver si hay un evento de teclado.
+        // Si no hay evento, devuelve false y el loop continúa.
+        if event::poll(tick_rate)? {
+            if let Event::Key(key) = event::read()? {
+                if key.kind == KeyEventKind::Press {
+                    match key.code {
+                        KeyCode::Char('q') => app.quit(),
+                        KeyCode::Left => app.previous_tab(),
+                        KeyCode::Right | KeyCode::Tab => app.next_tab(),
+                        KeyCode::Char(' ') => app.toggle_timer(),
+                        KeyCode::Up => {
+                            if app.current_tab == 0 {
+                                app.add_minutes(1);
+                            }
+                        },
+                        KeyCode::Down => {
+                            if app.current_tab == 0 {
+                                app.add_minutes(-1);
+                            }
+                        },
+                        _ => {}
+                    }
                 }
             }
         }
+
+        // Llamamos a on_tick para que la app descuente el tiempo si procede
+        app.on_tick();
 
         if app.should_quit {
             return Ok(());
