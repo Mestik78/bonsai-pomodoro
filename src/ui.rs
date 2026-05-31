@@ -1,10 +1,11 @@
 use ratatui::{
     layout::{Constraint, Layout},
     style::{Color, Modifier, Style},
-    text::{Line, Span},
+    text::{Line, Span, Text},
     widgets::{Block, Borders, Paragraph, Tabs},
     Frame,
 };
+
 
 use crate::app::App;
 
@@ -34,15 +35,34 @@ pub fn render(frame: &mut Frame, app: &App) {
         .borders(Borders::ALL)
         .border_style(Style::default().fg(Color::DarkGray));
 
-    let content = match app.current_tab {
-        0 => "Contenido del Temporizador. Usa las flechas <- y -> para cambiar de pestaña. Presiona 'q' para salir.",
-        1 => "Contenido del Bosque. Aquí crecerán tus árboles. Usa las flechas <- y -> para cambiar de pestaña. Presiona 'q' para salir.",
+    let (content, style) = match app.current_tab {
+        0 => {
+            let mut text = Text::default();
+            for line in app.bonsai_ansi.lines() {
+                let mut spans = vec![];
+                for c in line.chars() {
+                    let style = match c {
+                        '&' | '~' | 'v' | '*' => Style::default().fg(Color::LightGreen),
+                        '|' | '\\' | '/' | '_' | '(' | ')' | '<' | '>' => Style::default().fg(Color::Rgb(139, 69, 19)), // Marrón
+                        ':' | '.' | '-' | '[' | ']' => Style::default().fg(Color::DarkGray),
+                        _ => Style::default().fg(Color::White),
+                    };
+                    spans.push(Span::styled(c.to_string(), style));
+                }
+                text.lines.push(Line::from(spans));
+            }
+            (text, Style::default())
+        },
+        1 => (
+            Text::raw("Contenido del Bosque. Aquí crecerán tus árboles. Usa <- y -> para cambiar de pestaña. Presiona 'q' para salir."),
+            Style::default().fg(Color::White)
+        ),
         _ => unreachable!(),
     };
 
     let paragraph = Paragraph::new(content)
         .block(inner_block)
-        .style(Style::default().fg(Color::White));
+        .style(style);
 
     frame.render_widget(paragraph, chunks[1]);
 }
