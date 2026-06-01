@@ -57,6 +57,16 @@ fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, app: &mut App)
                         KeyCode::Left => app.previous_tab(),
                         KeyCode::Right | KeyCode::Tab => app.next_tab(),
                         KeyCode::Char(' ') => app.toggle_timer(),
+                        KeyCode::Char('r') => {
+                            if app.current_tab == 0 {
+                                app.reset_timer();
+                            }
+                        },
+                        KeyCode::Char('f') => {
+                            if app.current_tab == 0 {
+                                app.finish_early();
+                            }
+                        },
                         KeyCode::Up => {
                             if app.current_tab == 0 {
                                 if key.modifiers.contains(KeyModifiers::CONTROL) {

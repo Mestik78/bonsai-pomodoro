@@ -2,19 +2,44 @@ use std::time::Instant;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use directories::ProjectDirs;
+use chrono::Utc;
 
-#[derive(Serialize, Deserialize)]
-struct AppState {
-    time_left: u64,
+#[derive(Serialize, Deserialize, Clone, PartialEq)]
+pub enum TimerState {
+    New,
+    Running,
+    Paused,
 }
 
+#[derive(Serialize, Deserialize, Clone)]
+pub struct TimerSession {
+    #[serde(rename = "start-time")]
+    pub start_time: String,
+    
+    pub duration: u64,
+    
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub state: Option<TimerState>,
+    
+    #[serde(rename = "time-left")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub time_left: Option<u64>,
+
+    #[serde(rename = "actual-runtime", skip_serializing_if = "Option::is_none")]
+    pub actual_runtime: Option<u64>,
+}
+
+#[derive(Serialize, Deserialize, Default)]
+struct AppState {
+    #[serde(default)]
+    timers: Vec<TimerSession>,
+}
 
 pub struct App {
     pub current_tab: usize,
     pub should_quit: bool,
     pub tab_titles: Vec<&'static str>,
-    pub time_left: u64, // Segundos restantes
-    pub is_running: bool,
+    pub timers: Vec<TimerSession>,
     pub last_tick: Instant,
 }
 
@@ -32,22 +57,44 @@ impl App {
     }
 
     pub fn new() -> Self {
-        let mut time_left = 50 * 60; // 50 minutos iniciales
+        let mut timers = Vec::new();
         
         if let Some(path) = Self::state_file_path() {
             if let Ok(content) = fs::read_to_string(&path) {
                 if let Ok(state) = serde_json::from_str::<AppState>(&content) {
-                    time_left = state.time_left;
+                    timers = state.timers;
                 }
             }
+        }
+
+        let mut need_new = false;
+        let mut new_duration = 50 * 60;
+        if let Some(first) = timers.first_mut() {
+            if first.state.is_none() {
+                need_new = true;
+                new_duration = first.duration;
+            } else if first.state == Some(TimerState::Running) {
+                first.state = Some(TimerState::Paused);
+            }
+        } else {
+            need_new = true;
+        }
+
+        if need_new {
+            timers.insert(0, TimerSession {
+                start_time: Utc::now().to_rfc3339(),
+                duration: new_duration,
+                state: Some(TimerState::New),
+                time_left: Some(new_duration),
+                actual_runtime: None,
+            });
         }
 
         Self {
             current_tab: 0,
             should_quit: false,
             tab_titles: vec!["Temporizador", "Bosque"],
-            time_left,
-            is_running: false,
+            timers,
             last_tick: Instant::now(),
         }
     }
@@ -55,60 +102,149 @@ impl App {
     pub fn save_state(&self) {
         if let Some(path) = Self::state_file_path() {
             let state = AppState {
-                time_left: self.time_left,
+                timers: self.timers.clone(),
             };
-            if let Ok(json) = serde_json::to_string(&state) {
+            if let Ok(json) = serde_json::to_string_pretty(&state) {
                 let _ = fs::write(path, json);
             }
         }
     }
 
+    pub fn active_timer(&self) -> &TimerSession {
+        &self.timers[0]
+    }
+
+    pub fn active_timer_mut(&mut self) -> &mut TimerSession {
+        &mut self.timers[0]
+    }
+
     pub fn toggle_timer(&mut self) {
-        self.is_running = !self.is_running;
-        if self.is_running {
-            // Al reanudar, reiniciamos last_tick para no restar el tiempo de pausa
-            self.last_tick = Instant::now();
+        let state = self.active_timer().state.clone();
+        match state {
+            Some(TimerState::New) | Some(TimerState::Paused) => {
+                let timer = self.active_timer_mut();
+                timer.state = Some(TimerState::Running);
+                if state == Some(TimerState::New) {
+                    timer.start_time = Utc::now().to_rfc3339();
+                }
+                self.last_tick = Instant::now();
+            },
+            Some(TimerState::Running) => {
+                let timer = self.active_timer_mut();
+                timer.state = Some(TimerState::Paused);
+            },
+            None => {
+                let duration = self.active_timer().duration;
+                self.timers.insert(0, TimerSession {
+                    start_time: Utc::now().to_rfc3339(),
+                    duration,
+                    state: Some(TimerState::New),
+                    time_left: Some(duration),
+                    actual_runtime: None,
+                });
+            }
         }
     }
 
     pub fn add_minutes(&mut self, minutes: i64) {
-        let current_minutes = (self.time_left as i64) / 60;
+        let timer = self.active_timer_mut();
+        if timer.state == Some(TimerState::Running) || timer.state.is_none() { return; }
+        
+        let current_time = timer.time_left.unwrap_or(0);
+        let current_minutes = (current_time as i64) / 60;
         let new_minutes = current_minutes + minutes;
         
-        if new_minutes <= 0 {
-            self.time_left = 0;
-            self.is_running = false;
-        } else {
-            // Mantenemos los segundos actuales y solo modificamos los minutos
-            let current_seconds = (self.time_left as i64) % 60;
-            self.time_left = (new_minutes * 60 + current_seconds) as u64;
+        let mut new_time = 0;
+        if new_minutes > 0 {
+            let current_seconds = (current_time as i64) % 60;
+            new_time = (new_minutes * 60 + current_seconds) as u64;
+        }
+
+        if timer.state == Some(TimerState::New) && new_time < 1 {
+            new_time = 1;
+        }
+
+        timer.time_left = Some(new_time);
+        if timer.state == Some(TimerState::New) {
+            timer.duration = new_time;
         }
     }
 
     pub fn add_seconds(&mut self, seconds: i64) {
-        let new_time = (self.time_left as i64) + seconds;
+        let timer = self.active_timer_mut();
+        if timer.state == Some(TimerState::Running) || timer.state.is_none() { return; }
         
-        if new_time <= 0 {
-            self.time_left = 0;
-            self.is_running = false;
-        } else {
-            self.time_left = new_time as u64;
+        let current_time = timer.time_left.unwrap_or(0);
+        let new_time_i = (current_time as i64) + seconds;
+        
+        let mut new_time = if new_time_i <= 0 { 0 } else { new_time_i as u64 };
+        
+        if timer.state == Some(TimerState::New) && new_time < 1 {
+            new_time = 1;
+        }
+        
+        timer.time_left = Some(new_time);
+        if timer.state == Some(TimerState::New) {
+            timer.duration = new_time;
+        }
+    }
+
+    pub fn reset_timer(&mut self) {
+        let timer = self.active_timer_mut();
+        if timer.state.is_some() {
+            timer.time_left = Some(timer.duration);
+            timer.state = Some(TimerState::New);
+        }
+    }
+
+    pub fn finish_early(&mut self) {
+        let mut just_finished = false;
+        {
+            let timer = self.active_timer_mut();
+            if timer.state.is_some() {
+                let current_time = timer.time_left.unwrap_or(0);
+                let actual = timer.duration.saturating_sub(current_time);
+                timer.actual_runtime = if actual == timer.duration { None } else { Some(actual) };
+                timer.state = None;
+                timer.time_left = None;
+                just_finished = true;
+            }
+        }
+        if just_finished {
+            self.save_state();
         }
     }
 
     pub fn on_tick(&mut self) {
-        if self.is_running {
+        let is_running = self.active_timer().state == Some(TimerState::Running);
+        if is_running {
             let now = Instant::now();
             let elapsed = now.duration_since(self.last_tick).as_secs();
             
             if elapsed >= 1 {
-                if self.time_left >= elapsed {
-                    self.time_left -= elapsed;
-                } else {
-                    self.time_left = 0;
-                    self.is_running = false;
+                let mut just_finished = false;
+                {
+                    let timer = self.active_timer_mut();
+                    let current_time = timer.time_left.unwrap_or(0);
+                    if current_time >= elapsed {
+                        timer.time_left = Some(current_time - elapsed);
+                    } else {
+                        timer.time_left = Some(0);
+                    }
+
+                    if timer.time_left == Some(0) {
+                        timer.actual_runtime = None;
+                        timer.state = None;
+                        timer.time_left = None;
+                        just_finished = true;
+                    }
                 }
+                
                 self.last_tick += std::time::Duration::from_secs(elapsed);
+                
+                if just_finished {
+                    self.save_state();
+                }
             }
         }
     }

@@ -7,7 +7,7 @@ use ratatui::{
 };
 use tui_big_text::{BigText, PixelSize};
 
-use crate::app::App;
+use crate::app::{App, TimerState};
 
 pub fn render(frame: &mut Frame, app: &App) {
     let chunks = Layout::default()
@@ -41,8 +41,10 @@ pub fn render(frame: &mut Frame, app: &App) {
     match app.current_tab {
         0 => {
             // Pestaña Temporizador
-            let minutes = app.time_left / 60;
-            let seconds = app.time_left % 60;
+            let timer = app.active_timer();
+            let time_left = timer.time_left.unwrap_or(0);
+            let minutes = time_left / 60;
+            let seconds = time_left % 60;
             let timer_text = format!("{:02}:{:02}", minutes, seconds);
 
             // Dividimos verticalmente para centrar el BigText y los mensajes
@@ -79,12 +81,18 @@ pub fn render(frame: &mut Frame, app: &App) {
             frame.render_widget(big_text, horiz_chunks[1]);
 
             // Indicador de estado
-            let status_text = if app.is_running {
-                "[ CORRIENDO ]"
-            } else {
-                "[ PAUSADO ]"
+            let status_text = match timer.state {
+                Some(TimerState::New) => "[ NUEVO ]",
+                Some(TimerState::Running) => "[ CORRIENDO ]",
+                Some(TimerState::Paused) => "[ PAUSADO ]",
+                None => "[ FINALIZADO ]",
             };
-            let status_color = if app.is_running { Color::Green } else { Color::Yellow };
+            let status_color = match timer.state {
+                Some(TimerState::New) => Color::Cyan,
+                Some(TimerState::Running) => Color::Green,
+                Some(TimerState::Paused) => Color::Yellow,
+                None => Color::Red,
+            };
             let status_p = Paragraph::new(Span::styled(status_text, Style::default().fg(status_color).add_modifier(Modifier::BOLD)))
                 .alignment(Alignment::Center);
             frame.render_widget(status_p, vert_chunks[3]);
