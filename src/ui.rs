@@ -6,7 +6,6 @@ use ratatui::{
     Frame,
 };
 use tui_big_text::{BigText, PixelSize};
-use chrono::DateTime;
 
 use crate::app::{App, TimerState, AppMode, TimerSession};
 use crate::bonsai;
@@ -206,52 +205,108 @@ pub fn render(frame: &mut Frame, app: &mut App) {
         },
         1 => {
             let finished_timers: Vec<&TimerSession> = app.timers.iter().filter(|t| t.state.is_none()).collect();
-            
-            if finished_timers.is_empty() {
+                     if finished_timers.is_empty() {
                 let p = Paragraph::new("Aún no tienes sesiones finalizadas.")
                     .alignment(Alignment::Center)
                     .block(Block::default().borders(Borders::ALL));
                 frame.render_widget(p, inner_area);
             } else {
-                let items: Vec<ListItem> = finished_timers.into_iter().map(|t| {
-                    let date_str = match DateTime::parse_from_rfc3339(&t.start_time) {
-                        Ok(dt) => dt.format("%Y-%m-%d %H:%M").to_string(),
+                let mut days_order = Vec::new();
+                let mut days_map: std::collections::HashMap<String, Vec<&TimerSession>> = std::collections::HashMap::new();
+                
+                for t in finished_timers {
+                    let date_str = match chrono::DateTime::parse_from_rfc3339(&t.start_time) {
+                        Ok(dt) => dt.format("%Y-%m-%d").to_string(),
                         Err(_) => t.start_time.clone(),
                     };
-                    
-                    let duration = t.actual_runtime.unwrap_or(t.duration);
-                    let minutes = duration / 60;
-                    let seconds = duration % 60;
-                    let title = t.title.as_deref().unwrap_or("Sin Título");
-                    
-                    let header = format!("{} | {} | {:02}:{:02}", title, date_str, minutes, seconds);
-                    
-                    let mut text_lines = vec![
-                        ratatui::text::Line::from(ratatui::text::Span::styled(
-                            header,
-                            Style::default().fg(Color::Green).add_modifier(ratatui::style::Modifier::BOLD)
-                        ))
-                    ];
-                    
-                    if let Some(desc) = &t.description {
-                        text_lines.push(ratatui::text::Line::from(desc.as_str()));
+                    if !days_map.contains_key(&date_str) {
+                        days_order.push(date_str.clone());
+                        days_map.insert(date_str.clone(), Vec::new());
+                    }
+                    days_map.get_mut(&date_str).unwrap().push(t);
+                }
+                
+                let selected_idx = app.bosque_state.selected().unwrap_or(0);
+                
+                let mut items = Vec::new();
+                let mut target_line_idx = 0;
+                let mut current_line = 0;
+                
+                for (day_idx, date_str) in days_order.into_iter().enumerate() {
+                    let is_selected = day_idx == selected_idx;
+                    if is_selected {
+                        target_line_idx = current_line;
                     }
                     
-                    let mini_canvas = bonsai::generate_bonsai(t.seed, 1.0);
-                    let mini_lines = mini_canvas.render(0.5);
-                    for line in mini_lines {
-                        text_lines.push(line);
+                    let title_style = if is_selected {
+                        Style::default().fg(Color::Yellow).bg(Color::DarkGray).add_modifier(ratatui::style::Modifier::BOLD)
+                    } else {
+                        Style::default().fg(Color::Green).add_modifier(ratatui::style::Modifier::BOLD)
+                    };
+                    
+                    // Title item
+                    items.push(ListItem::new(ratatui::text::Line::from(ratatui::text::Span::styled(format!(" {} ", date_str), title_style))));
+                    current_line += 1;
+                    
+                    items.push(ListItem::new(ratatui::text::Line::from(""))); // Spacer
+                    current_line += 1;
+                    
+                    let timers_for_day = days_map.get(&date_str).unwrap();
+                    
+                    let mut timer_blocks: Vec<Vec<ratatui::text::Line>> = Vec::new();
+                    for t in timers_for_day {
+                        let time_str = match chrono::DateTime::parse_from_rfc3339(&t.start_time) {
+                            Ok(dt) => dt.format("%H:%M").to_string(),
+                            Err(_) => "".to_string(),
+                        };
+                        let duration = t.actual_runtime.unwrap_or(t.duration);
+                        let mins = duration / 60;
+                        let secs = duration % 60;
+                        
+                        let header1 = format!("{}  {:02}:{:02}", time_str, mins, secs);
+                        
+                        let mini_canvas = bonsai::generate_bonsai(t.seed, 1.0);
+                        let mini_lines = mini_canvas.render(0.25);
+                        
+                        let mut block_lines = Vec::new();
+                        block_lines.push(ratatui::text::Line::from(ratatui::text::Span::styled(header1, Style::default().fg(Color::Cyan))));
+                        for line in mini_lines {
+                            block_lines.push(line);
+                        }
+                        timer_blocks.push(block_lines);
                     }
                     
-                    ListItem::new(text_lines)
-                        .style(Style::default().fg(Color::White))
-                }).collect();
-
+                    let block_width = 25;
+                    let max_height = timer_blocks.iter().map(|b| b.len()).max().unwrap_or(0);
+                    let available_width = inner_area.width as usize;
+                    let cols = (available_width / block_width).max(1);
+                    
+                    for row_chunk in timer_blocks.chunks(cols) {
+                        for i in 0..max_height {
+                            let mut combined_spans = Vec::new();
+                            for block in row_chunk {
+                                if i < block.len() {
+                                    let line_len: usize = block[i].spans.iter().map(|s| s.content.chars().count()).sum();
+                                    combined_spans.extend(block[i].spans.clone());
+                                    let padding = block_width.saturating_sub(line_len);
+                                    combined_spans.push(ratatui::text::Span::raw(" ".repeat(padding)));
+                                } else {
+                                    combined_spans.push(ratatui::text::Span::raw(" ".repeat(block_width)));
+                                }
+                            }
+                            items.push(ListItem::new(ratatui::text::Line::from(combined_spans)));
+                            current_line += 1;
+                        }
+                        items.push(ListItem::new(ratatui::text::Line::from(""))); // Spacer between rows
+                        current_line += 1;
+                    }
+                }
+                
+                app.bosque_state.select(Some(target_line_idx));
                 let list = List::new(items)
-                    .block(Block::default().borders(Borders::ALL).title(" Historial del Bosque "))
-                    .highlight_style(Style::default().bg(Color::DarkGray).add_modifier(Modifier::BOLD))
-                    .highlight_symbol(">> ");
-
+                    .block(Block::default().borders(Borders::ALL).title(" Bosque "))
+                    .style(Style::default().fg(Color::White));
+                    
                 frame.render_stateful_widget(list, inner_area, &mut app.bosque_state);
             }
         },

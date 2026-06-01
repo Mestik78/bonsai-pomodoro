@@ -383,12 +383,26 @@ impl App {
         self.mode = AppMode::Normal;
     }
 
+    pub fn get_unique_days(&self) -> Vec<String> {
+        let mut days = Vec::new();
+        for t in self.timers.iter().filter(|t| t.state.is_none()) {
+            let date_str = match chrono::DateTime::parse_from_rfc3339(&t.start_time) {
+                Ok(dt) => dt.format("%Y-%m-%d").to_string(),
+                Err(_) => t.start_time.clone(),
+            };
+            if !days.contains(&date_str) {
+                days.push(date_str);
+            }
+        }
+        days
+    }
+
     pub fn bosque_next(&mut self) {
-        let finished_count = self.timers.iter().filter(|t| t.state.is_none()).count();
-        if finished_count == 0 { return; }
+        let days_count = self.get_unique_days().len();
+        if days_count == 0 { return; }
         let i = match self.bosque_state.selected() {
             Some(i) => {
-                if i >= finished_count - 1 {
+                if i >= days_count - 1 {
                     0
                 } else {
                     i + 1
@@ -400,12 +414,12 @@ impl App {
     }
 
     pub fn bosque_previous(&mut self) {
-        let finished_count = self.timers.iter().filter(|t| t.state.is_none()).count();
-        if finished_count == 0 { return; }
+        let days_count = self.get_unique_days().len();
+        if days_count == 0 { return; }
         let i = match self.bosque_state.selected() {
             Some(i) => {
                 if i == 0 {
-                    finished_count - 1
+                    days_count - 1
                 } else {
                     i - 1
                 }
