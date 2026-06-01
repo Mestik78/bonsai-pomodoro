@@ -75,6 +75,7 @@ pub struct App {
     pub forest_selected_day: usize,
     pub forest_selected_bonsai: usize,
     pub forest_cols: usize,
+    pub stats_state: ListState,
 }
 
 impl App {
@@ -139,10 +140,13 @@ impl App {
             forest_selected_day = 0;
         }
 
+        let mut stats_state = ListState::default();
+        stats_state.select(Some(0));
+
         Self {
             current_tab: 0,
             should_quit: false,
-            tab_titles: vec!["Timer", "Forest"],
+            tab_titles: vec!["Timer", "Forest", "Stats"],
             timers,
             last_tick: Instant::now(),
             mode: AppMode::Normal,
@@ -152,6 +156,7 @@ impl App {
             forest_selected_day,
             forest_selected_bonsai: 0,
             forest_cols: 1,
+            stats_state,
         }
     }
 
@@ -525,8 +530,35 @@ impl App {
         let target = self.forest_selected_bonsai + cols;
         if target < count {
             self.forest_selected_bonsai = target;
-        } else {
             self.forest_selected_bonsai = self.forest_selected_bonsai % cols;
         }
+    }
+
+    pub fn stats_next(&mut self) {
+        let i = match self.stats_state.selected() {
+            Some(i) => {
+                if i >= 2 {
+                    0
+                } else {
+                    i + 1
+                }
+            }
+            None => 0,
+        };
+        self.stats_state.select(Some(i));
+    }
+
+    pub fn stats_previous(&mut self) {
+        let i = match self.stats_state.selected() {
+            Some(i) => {
+                if i == 0 {
+                    2
+                } else {
+                    i - 1
+                }
+            }
+            None => 0,
+        };
+        self.stats_state.select(Some(i));
     }
 }

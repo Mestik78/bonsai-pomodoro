@@ -524,6 +524,40 @@ pub fn render(frame: &mut Frame, app: &mut App) {
                 }
             }
         },
+        2 => {
+            let prev_width = 20.max((inner_area.width as f32 * 0.45) as u16);
+            let list_width = inner_area.width.saturating_sub(prev_width);
+            
+            let chunks = Layout::default()
+                .direction(Direction::Horizontal)
+                .constraints([Constraint::Length(prev_width), Constraint::Length(list_width)])
+                .split(inner_area);
+            
+            let mut items = Vec::new();
+            let options = ["Daily", "Weekly", "Monthly"];
+            for (i, opt) in options.iter().enumerate() {
+                let is_selected = app.stats_state.selected() == Some(i);
+                let style = if is_selected {
+                    Style::default().fg(Color::Yellow).add_modifier(ratatui::style::Modifier::BOLD)
+                } else {
+                    Style::default().fg(Color::DarkGray).add_modifier(ratatui::style::Modifier::BOLD)
+                };
+                items.push(ListItem::new(ratatui::text::Line::from(ratatui::text::Span::styled(format!(" {} ", opt), style))));
+            }
+            
+            let list = List::new(items)
+                .block(Block::default()
+                    .borders(Borders::RIGHT)
+                    .border_style(Style::default().fg(Color::DarkGray)))
+                .style(Style::default().fg(Color::White));
+                
+            frame.render_stateful_widget(list, chunks[0], &mut app.stats_state);
+            
+            let right_block = Block::default()
+                .borders(Borders::NONE);
+            
+            frame.render_widget(right_block, chunks[1]);
+        },
         _ => unreachable!(),
     }
 }

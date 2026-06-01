@@ -130,6 +130,8 @@ fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, app: &mut App)
                                         } else {
                                             app.forest_previous();
                                         }
+                                    } else if app.current_tab == 2 {
+                                        app.stats_previous();
                                     }
                                 },
                                 KeyCode::Down => {
@@ -145,6 +147,8 @@ fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, app: &mut App)
                                         } else {
                                             app.forest_next();
                                         }
+                                    } else if app.current_tab == 2 {
+                                        app.stats_next();
                                     }
                                 },
                                 KeyCode::Enter => {
