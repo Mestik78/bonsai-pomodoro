@@ -21,6 +21,12 @@ pub enum ForestLevel {
     Bonsai,
 }
 
+#[derive(PartialEq)]
+pub enum NavDir {
+    Up,
+    Down,
+}
+
 
 #[derive(Serialize, Deserialize, Clone, PartialEq)]
 pub enum TimerState {
@@ -76,6 +82,7 @@ pub struct App {
     pub forest_selected_bonsai: usize,
     pub forest_cols: usize,
     pub stats_state: ListState,
+    pub forest_last_nav_dir: NavDir,
 }
 
 impl App {
@@ -157,6 +164,7 @@ impl App {
             forest_selected_bonsai: 0,
             forest_cols: 1,
             stats_state,
+            forest_last_nav_dir: NavDir::Down,
         }
     }
 
@@ -442,8 +450,10 @@ impl App {
         if days_count == 0 { return; }
         if self.forest_selected_day >= days_count - 1 {
             self.forest_selected_day = 0;
+            self.forest_last_nav_dir = NavDir::Up; // Focus top
         } else {
             self.forest_selected_day += 1;
+            self.forest_last_nav_dir = NavDir::Down; // Focus bottom
         }
     }
 
@@ -452,8 +462,10 @@ impl App {
         if days_count == 0 { return; }
         if self.forest_selected_day == 0 {
             self.forest_selected_day = days_count - 1;
+            self.forest_last_nav_dir = NavDir::Down; // Focus bottom
         } else {
             self.forest_selected_day -= 1;
+            self.forest_last_nav_dir = NavDir::Up; // Focus top
         }
     }
 
@@ -530,6 +542,7 @@ impl App {
         let target = self.forest_selected_bonsai + cols;
         if target < count {
             self.forest_selected_bonsai = target;
+        } else {
             self.forest_selected_bonsai = self.forest_selected_bonsai % cols;
         }
     }

@@ -307,7 +307,7 @@ pub fn render(frame: &mut Frame, app: &mut App) {
                 
                 let mut items = Vec::new();
                 let mut target_line_idx = 0;
-                let mut current_line = 0;
+                let mut current_line: usize = 0;
                 
                 let available_width = if app.forest_level == crate::app::ForestLevel::Bonsai {
                     let prev_width = 20.max((inner_area.width as f32 * 0.45) as u16);
@@ -324,9 +324,7 @@ pub fn render(frame: &mut Frame, app: &mut App) {
                         Style::default().fg(Color::DarkGray).add_modifier(ratatui::style::Modifier::BOLD)
                     };
                     
-                    if is_selected && app.forest_level == crate::app::ForestLevel::Day {
-                        target_line_idx = current_line;
-                    }
+                    let day_start_line = current_line;
                     
                     // Title item
                     let mut title_spans = vec![
@@ -418,6 +416,14 @@ pub fn render(frame: &mut Frame, app: &mut App) {
                         }
                         items.push(ListItem::new(ratatui::text::Line::from(""))); // Spacer between rows
                         current_line += 1;
+                    }
+                    
+                    if is_selected && app.forest_level == crate::app::ForestLevel::Day {
+                        if app.forest_last_nav_dir == crate::app::NavDir::Down {
+                            target_line_idx = current_line.saturating_sub(1_usize);
+                        } else {
+                            target_line_idx = day_start_line;
+                        }
                     }
                 }
                 
