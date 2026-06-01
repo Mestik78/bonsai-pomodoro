@@ -82,7 +82,15 @@ pub fn render(frame: &mut Frame, app: &mut App) {
         let x = (d / 3000.0).clamp(0.0, 1.0);
         let progress = (x * x * (3.0 - 2.0 * x)) as f32;
         let canvas = bonsai::generate_bonsai(seed, progress);
-        let bonsai_lines = canvas.render(1.0);
+        
+        let zoom = if inner_area.width < 21 {
+            0.25
+        } else if inner_area.width < 31 {
+            0.5
+        } else {
+            1.0
+        };
+        let bonsai_lines = canvas.render(zoom);
         
         let bonsai_p = Paragraph::new(bonsai_lines.clone())
             .alignment(Alignment::Center);
@@ -128,7 +136,7 @@ pub fn render(frame: &mut Frame, app: &mut App) {
             let big_text = BigText::builder()
                 .pixel_size(PixelSize::Full)
                 .style(Style::default().fg(Color::Green))
-                .lines(vec![time_str.into()])
+                .lines(vec![time_str.clone().into()])
                 .build();
 
             let status_text = match app.mode {
@@ -172,7 +180,14 @@ pub fn render(frame: &mut Frame, app: &mut App) {
                 }
             }
             
-            let bonsai_lines = canvas.render(1.0);
+            let zoom = if inner_area.width < 21 {
+                0.25
+            } else if inner_area.width < 31 {
+                0.5
+            } else {
+                1.0
+            };
+            let bonsai_lines = canvas.render(zoom);
             
             let bonsai_p = Paragraph::new(bonsai_lines.clone())
                 .alignment(Alignment::Center);
@@ -189,35 +204,69 @@ pub fn render(frame: &mut Frame, app: &mut App) {
             frame.render_widget(bonsai_p, bonsai_vert_chunks[1]);
             
             // 2. Overlay Timer Widget
-            let timer_width = 45; // 39 text + 2 borders + 4 padding
-            let timer_height = 11; // 8 text + 2 borders + 1 top padding
-            let offset_x = 2;
-            let offset_y = 1;
-            
-            let timer_area = ratatui::layout::Rect {
-                x: inner_area.x + offset_x,
-                y: inner_area.y + offset_y,
-                width: timer_width.min(inner_area.width.saturating_sub(offset_x)),
-                height: timer_height.min(inner_area.height.saturating_sub(offset_y)),
-            };
-            
-            let timer_block = Block::default()
-                .borders(Borders::ALL)
-                .title(Span::styled(format!(" {} ", status_text), Style::default().fg(status_color).add_modifier(ratatui::style::Modifier::BOLD)));
+            let use_compact_timer = inner_area.height < 25 || inner_area.width < 52;
+
+            if use_compact_timer {
+                let timer_width = 16.max(status_text.len() as u16 + 4);
+                let timer_height = 3;
+                let offset_x = 2;
+                let offset_y = 1;
                 
-            frame.render_widget(ratatui::widgets::Clear, timer_area);
-            frame.render_widget(timer_block, timer_area);
-            
-            let inner_timer_area = ratatui::layout::Rect {
-                x: timer_area.x + 3,
-                y: timer_area.y + 2, // 1 for border + 1 for padding top
-                width: timer_area.width.saturating_sub(6),
-                height: 8, // exact BigText height
-            };
-            frame.render_widget(big_text, inner_timer_area);
+                let timer_area = ratatui::layout::Rect {
+                    x: inner_area.x + offset_x,
+                    y: inner_area.y + offset_y,
+                    width: timer_width.min(inner_area.width.saturating_sub(offset_x)),
+                    height: timer_height.min(inner_area.height.saturating_sub(offset_y)),
+                };
+                
+                let timer_block = Block::default()
+                    .borders(Borders::ALL)
+                    .title(Span::styled(format!(" {} ", status_text), Style::default().fg(status_color).add_modifier(ratatui::style::Modifier::BOLD)));
+                    
+                frame.render_widget(ratatui::widgets::Clear, timer_area);
+                
+                let timer_p = Paragraph::new(Span::styled(time_str, Style::default().fg(Color::Green).add_modifier(ratatui::style::Modifier::BOLD)))
+                    .alignment(Alignment::Center)
+                    .block(timer_block);
+                    
+                frame.render_widget(timer_p, timer_area);
+            } else {
+                let timer_width = 45; // 39 text + 2 borders + 4 padding
+                let timer_height = 11; // 8 text + 2 borders + 1 top padding
+                let offset_x = 2;
+                let offset_y = 1;
+                
+                let timer_area = ratatui::layout::Rect {
+                    x: inner_area.x + offset_x,
+                    y: inner_area.y + offset_y,
+                    width: timer_width.min(inner_area.width.saturating_sub(offset_x)),
+                    height: timer_height.min(inner_area.height.saturating_sub(offset_y)),
+                };
+                
+                let timer_block = Block::default()
+                    .borders(Borders::ALL)
+                    .title(Span::styled(format!(" {} ", status_text), Style::default().fg(status_color).add_modifier(ratatui::style::Modifier::BOLD)));
+                    
+                frame.render_widget(ratatui::widgets::Clear, timer_area);
+                frame.render_widget(timer_block, timer_area);
+                
+                let inner_timer_area = ratatui::layout::Rect {
+                    x: timer_area.x + 3,
+                    y: timer_area.y + 2, // 1 for border + 1 for padding top
+                    width: timer_area.width.saturating_sub(6),
+                    height: 8, // exact BigText height
+                };
+                frame.render_widget(big_text, inner_timer_area);
+            }
             
             // 3. Overlay Help Text
-            let help_text = "Espacio: Pausar/Reanudar  |  Arr/Aba: Ajustar Minuto  |  Izq/Der: Cambiar Pestaña";
+            let help_text = if inner_area.width < 31 {
+                "Espacio: Pausar/Reanudar"
+            } else if inner_area.width < 52 {
+                "Espacio: Pausar/Reanudar  |  Arr/Aba: Ajustar Minuto"
+            } else {
+                "Espacio: Pausar/Reanudar  |  Arr/Aba: Ajustar Minuto  |  Izq/Der: Cambiar Pestaña"
+            };
             let help_p = Paragraph::new(Span::styled(help_text, Style::default().fg(Color::DarkGray)))
                 .alignment(Alignment::Center);
                 
