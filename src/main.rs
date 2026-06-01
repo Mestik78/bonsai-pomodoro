@@ -14,7 +14,7 @@ use crate::app::{App, AppMode};
 
 fn main() -> io::Result<()> {
     let args: Vec<String> = std::env::args().collect();
-    let is_production = args.contains(&"--user".to_string());
+    let is_production = !args.contains(&"--dev".to_string());
     
     if args.contains(&"--bonsai".to_string()) {
         let seed = args.iter().position(|a| a == "--seed")
