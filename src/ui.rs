@@ -35,7 +35,7 @@ pub fn render(frame: &mut Frame, app: &mut App) {
         .borders(Borders::ALL)
         .border_style(Style::default().fg(Color::DarkGray));
 
-    // Renderizamos el marco interno general
+    // Render the general inner frame
     frame.render_widget(inner_block.clone(), chunks[1]);
     let inner_area = inner_block.inner(chunks[1]);
 
@@ -56,20 +56,20 @@ pub fn render(frame: &mut Frame, app: &mut App) {
             ])
             .split(horiz_chunks[0]);
         
-        let help_p = Paragraph::new("¡Pomodoro finalizado! Presiona Tab para cambiar de campo, Enter para guardar.")
+        let help_p = Paragraph::new("Pomodoro finished! Press Tab to switch fields, Enter to save.")
             .alignment(Alignment::Center)
             .style(Style::default().fg(Color::Cyan));
         frame.render_widget(help_p, input_chunks[0]);
 
         let title_style = if *focus == 0 { Style::default().fg(Color::Yellow) } else { Style::default().fg(Color::DarkGray) };
         let title_p = Paragraph::new(title.as_str())
-            .block(Block::default().borders(Borders::ALL).title(" Título "))
+            .block(Block::default().borders(Borders::ALL).title(" Title "))
             .style(title_style);
         frame.render_widget(title_p, input_chunks[1]);
 
         let desc_style = if *focus == 1 { Style::default().fg(Color::Yellow) } else { Style::default().fg(Color::DarkGray) };
         let desc_p = Paragraph::new(description.as_str())
-            .block(Block::default().borders(Borders::ALL).title(" Descripción "))
+            .block(Block::default().borders(Borders::ALL).title(" Description "))
             .style(desc_style)
             .wrap(ratatui::widgets::Wrap { trim: false });
         frame.render_widget(desc_p, input_chunks[2]);
@@ -113,11 +113,11 @@ pub fn render(frame: &mut Frame, app: &mut App) {
         0 => {
             let active_timer = app.active_timer();
             let state_str = match active_timer.state {
-                Some(TimerState::New) => "Nuevo",
-                Some(TimerState::Starting(_)) => "Iniciando...",
-                Some(TimerState::Running) => "Corriendo",
-                Some(TimerState::Paused) => "Pausado",
-                None => "Finalizado",
+                Some(TimerState::New) => "New",
+                Some(TimerState::Starting(_)) => "Starting...",
+                Some(TimerState::Running) => "Running",
+                Some(TimerState::Paused) => "Paused",
+                None => "Finished",
             };
 
             // Calculate formatted time
@@ -141,7 +141,7 @@ pub fn render(frame: &mut Frame, app: &mut App) {
 
             let status_text = match app.mode {
                 AppMode::Normal => state_str,
-                _ => "Introduciendo datos...",
+                _ => "Entering data...",
             };
             let status_color = match app.mode {
                 AppMode::Normal => match active_timer.state {
@@ -262,11 +262,11 @@ pub fn render(frame: &mut Frame, app: &mut App) {
             
             // 3. Overlay Help Text
             let help_text = if inner_area.width < 31 {
-                "Espacio: Pausar/Reanudar"
+                "Space: Pause/Resume"
             } else if inner_area.width < 52 {
-                "Espacio: Pausar/Reanudar  |  Arr/Aba: Ajustar Minuto"
+                "Space: Pause/Resume  |  Up/Down: Adjust Minute"
             } else {
-                "Espacio: Pausar/Reanudar  |  Arr/Aba: Ajustar Minuto  |  Izq/Der: Cambiar Pestaña"
+                "Space: Pause/Resume  |  Up/Down: Adjust Minute  |  Left/Right: Switch Tab"
             };
             let help_p = Paragraph::new(Span::styled(help_text, Style::default().fg(Color::DarkGray)))
                 .alignment(Alignment::Center);
@@ -283,7 +283,7 @@ pub fn render(frame: &mut Frame, app: &mut App) {
         1 => {
             let finished_timers: Vec<&TimerSession> = app.timers.iter().filter(|t| t.state.is_none()).collect();
                      if finished_timers.is_empty() {
-                let p = Paragraph::new("Aún no tienes sesiones finalizadas.")
+                let p = Paragraph::new("You have no finished sessions yet.")
                     .alignment(Alignment::Center)
                     .block(Block::default().borders(Borders::ALL));
                 frame.render_widget(p, inner_area);
@@ -303,13 +303,13 @@ pub fn render(frame: &mut Frame, app: &mut App) {
                     days_map.get_mut(&date_str).unwrap().push(t);
                 }
                 
-                let selected_idx = app.bosque_selected_day;
+                let selected_idx = app.forest_selected_day;
                 
                 let mut items = Vec::new();
                 let mut target_line_idx = 0;
                 let mut current_line = 0;
                 
-                let available_width = if app.bosque_level == crate::app::BosqueLevel::Bonsai {
+                let available_width = if app.forest_level == crate::app::ForestLevel::Bonsai {
                     (inner_area.width * 65 / 100) as usize
                 } else {
                     inner_area.width as usize
@@ -323,7 +323,7 @@ pub fn render(frame: &mut Frame, app: &mut App) {
                         Style::default().fg(Color::DarkGray).add_modifier(ratatui::style::Modifier::BOLD)
                     };
                     
-                    if is_selected && app.bosque_level == crate::app::BosqueLevel::Day {
+                    if is_selected && app.forest_level == crate::app::ForestLevel::Day {
                         target_line_idx = current_line;
                     }
                     
@@ -359,7 +359,7 @@ pub fn render(frame: &mut Frame, app: &mut App) {
                         let x = (d / 3000.0).clamp(0.0, 1.0);
                         let progress = (x * x * (3.0 - 2.0 * x)) as f32;
                         let mini_canvas = bonsai::generate_bonsai(t.seed, progress);
-                        let is_bonsai_selected = is_selected && app.bosque_level == crate::app::BosqueLevel::Bonsai && t_idx == app.bosque_selected_bonsai;
+                        let is_bonsai_selected = is_selected && app.forest_level == crate::app::ForestLevel::Bonsai && t_idx == app.forest_selected_bonsai;
                         let pot_color = if is_bonsai_selected { Some(Color::Yellow) } else { None };
                         let mini_lines = mini_canvas.render(0.5, Some(duration_str), pot_color);
                         
@@ -382,12 +382,12 @@ pub fn render(frame: &mut Frame, app: &mut App) {
                     let cols = (available_width / block_width).max(1);
                     
                     if is_selected {
-                        app.bosque_cols = cols;
+                        app.forest_cols = cols;
                     }
                     
                     for (row_idx, row_chunk) in timer_blocks.chunks(cols).enumerate() {
-                        if is_selected && app.bosque_level == crate::app::BosqueLevel::Bonsai {
-                            let selected_row = app.bosque_selected_bonsai / cols;
+                        if is_selected && app.forest_level == crate::app::ForestLevel::Bonsai {
+                            let selected_row = app.forest_selected_bonsai / cols;
                             if row_idx == selected_row {
                                 target_line_idx = current_line;
                             }
@@ -417,18 +417,18 @@ pub fn render(frame: &mut Frame, app: &mut App) {
                     }
                 }
                 
-                app.bosque_state.select(Some(target_line_idx));
+                app.forest_state.select(Some(target_line_idx));
                 let list = List::new(items)
                     .block(Block::default())
                     .style(Style::default().fg(Color::White));
                     
-                if app.bosque_level == crate::app::BosqueLevel::Bonsai {
+                if app.forest_level == crate::app::ForestLevel::Bonsai {
                     let chunks = Layout::default()
                         .direction(Direction::Horizontal)
                         .constraints([Constraint::Percentage(65), Constraint::Percentage(35)])
                         .split(inner_area);
                         
-                    frame.render_stateful_widget(list, chunks[0], &mut app.bosque_state);
+                    frame.render_stateful_widget(list, chunks[0], &mut app.forest_state);
                     
                     let details_block = Block::default()
                         .borders(Borders::LEFT)
@@ -440,10 +440,10 @@ pub fn render(frame: &mut Frame, app: &mut App) {
                     if selected_idx < days_order.len() {
                         let selected_day_str = &days_order[selected_idx];
                         if let Some(timers_for_day) = days_map.get(selected_day_str) {
-                            if app.bosque_selected_bonsai < timers_for_day.len() {
-                                let selected_bonsai = timers_for_day[app.bosque_selected_bonsai];
+                            if app.forest_selected_bonsai < timers_for_day.len() {
+                                let selected_bonsai = timers_for_day[app.forest_selected_bonsai];
                                 
-                                let title = selected_bonsai.title.as_deref().unwrap_or("Sin título");
+                                let title = selected_bonsai.title.as_deref().unwrap_or("Untitled");
                                 let desc = selected_bonsai.description.as_deref().unwrap_or("");
                                 
                                 let start_dt = chrono::DateTime::parse_from_rfc3339(&selected_bonsai.start_time).ok();
@@ -511,7 +511,7 @@ pub fn render(frame: &mut Frame, app: &mut App) {
                         }
                     }
                 } else {
-                    frame.render_stateful_widget(list, inner_area, &mut app.bosque_state);
+                    frame.render_stateful_widget(list, inner_area, &mut app.forest_state);
                 }
             }
         },

@@ -16,7 +16,7 @@ pub enum AppMode {
 }
 
 #[derive(PartialEq)]
-pub enum BosqueLevel {
+pub enum ForestLevel {
     Day,
     Bonsai,
 }
@@ -70,11 +70,11 @@ pub struct App {
     pub last_tick: Instant,
     pub mode: AppMode,
     pub is_production: bool,
-    pub bosque_state: ListState,
-    pub bosque_level: BosqueLevel,
-    pub bosque_selected_day: usize,
-    pub bosque_selected_bonsai: usize,
-    pub bosque_cols: usize,
+    pub forest_state: ListState,
+    pub forest_level: ForestLevel,
+    pub forest_selected_day: usize,
+    pub forest_selected_bonsai: usize,
+    pub forest_cols: usize,
 }
 
 impl App {
@@ -132,26 +132,26 @@ impl App {
         }
 
         let finished_count = timers.iter().filter(|t| t.state.is_none()).count();
-        let mut bosque_state = ListState::default();
-        let mut bosque_selected_day = 0;
+        let mut forest_state = ListState::default();
+        let mut forest_selected_day = 0;
         if finished_count > 0 {
-            bosque_state.select(Some(0));
-            bosque_selected_day = 0;
+            forest_state.select(Some(0));
+            forest_selected_day = 0;
         }
 
         Self {
             current_tab: 0,
             should_quit: false,
-            tab_titles: vec!["Temporizador", "Bosque"],
+            tab_titles: vec!["Timer", "Forest"],
             timers,
             last_tick: Instant::now(),
             mode: AppMode::Normal,
             is_production,
-            bosque_state,
-            bosque_level: BosqueLevel::Day,
-            bosque_selected_day,
-            bosque_selected_bonsai: 0,
-            bosque_cols: 1,
+            forest_state,
+            forest_level: ForestLevel::Day,
+            forest_selected_day,
+            forest_selected_bonsai: 0,
+            forest_cols: 1,
         }
     }
 
@@ -192,7 +192,7 @@ impl App {
                 timer.state = Some(TimerState::Paused);
             },
             Some(TimerState::Starting(_)) => {
-                // No hacer nada mientras está en la animación
+                // Do nothing while in the animation
             },
             None => {
                 let duration = self.active_timer().duration;
@@ -432,41 +432,41 @@ impl App {
         days
     }
 
-    pub fn bosque_next(&mut self) {
+    pub fn forest_next(&mut self) {
         let days_count = self.get_unique_days().len();
         if days_count == 0 { return; }
-        if self.bosque_selected_day >= days_count - 1 {
-            self.bosque_selected_day = 0;
+        if self.forest_selected_day >= days_count - 1 {
+            self.forest_selected_day = 0;
         } else {
-            self.bosque_selected_day += 1;
+            self.forest_selected_day += 1;
         }
     }
 
-    pub fn bosque_previous(&mut self) {
+    pub fn forest_previous(&mut self) {
         let days_count = self.get_unique_days().len();
         if days_count == 0 { return; }
-        if self.bosque_selected_day == 0 {
-            self.bosque_selected_day = days_count - 1;
+        if self.forest_selected_day == 0 {
+            self.forest_selected_day = days_count - 1;
         } else {
-            self.bosque_selected_day -= 1;
+            self.forest_selected_day -= 1;
         }
     }
 
-    pub fn bosque_enter(&mut self) {
+    pub fn forest_enter(&mut self) {
         if self.get_unique_days().is_empty() { return; }
-        self.bosque_level = BosqueLevel::Bonsai;
-        self.bosque_selected_bonsai = 0;
+        self.forest_level = ForestLevel::Bonsai;
+        self.forest_selected_bonsai = 0;
     }
 
-    pub fn bosque_escape(&mut self) {
-        self.bosque_level = BosqueLevel::Day;
+    pub fn forest_escape(&mut self) {
+        self.forest_level = ForestLevel::Day;
     }
 
     fn get_bonsai_count_for_selected_day(&self) -> usize {
         let days = self.get_unique_days();
         if days.is_empty() { return 0; }
         
-        let selected_idx = self.bosque_selected_day;
+        let selected_idx = self.forest_selected_day;
         if selected_idx >= days.len() { return 0; }
         let date_str = &days[selected_idx];
         
@@ -479,54 +479,54 @@ impl App {
         }).count()
     }
 
-    pub fn bosque_nav_left(&mut self) {
-        if self.bosque_level != BosqueLevel::Bonsai { return; }
+    pub fn forest_nav_left(&mut self) {
+        if self.forest_level != ForestLevel::Bonsai { return; }
         let count = self.get_bonsai_count_for_selected_day();
         if count == 0 { return; }
-        if self.bosque_selected_bonsai > 0 {
-            self.bosque_selected_bonsai -= 1;
+        if self.forest_selected_bonsai > 0 {
+            self.forest_selected_bonsai -= 1;
         } else {
-            self.bosque_selected_bonsai = count - 1;
+            self.forest_selected_bonsai = count - 1;
         }
     }
 
-    pub fn bosque_nav_right(&mut self) {
-        if self.bosque_level != BosqueLevel::Bonsai { return; }
+    pub fn forest_nav_right(&mut self) {
+        if self.forest_level != ForestLevel::Bonsai { return; }
         let count = self.get_bonsai_count_for_selected_day();
         if count == 0 { return; }
-        self.bosque_selected_bonsai = (self.bosque_selected_bonsai + 1) % count;
+        self.forest_selected_bonsai = (self.forest_selected_bonsai + 1) % count;
     }
 
-    pub fn bosque_nav_up(&mut self) {
-        if self.bosque_level != BosqueLevel::Bonsai { return; }
+    pub fn forest_nav_up(&mut self) {
+        if self.forest_level != ForestLevel::Bonsai { return; }
         let count = self.get_bonsai_count_for_selected_day();
         if count == 0 { return; }
-        let cols = self.bosque_cols.max(1);
-        if self.bosque_selected_bonsai >= cols {
-            self.bosque_selected_bonsai -= cols;
+        let cols = self.forest_cols.max(1);
+        if self.forest_selected_bonsai >= cols {
+            self.forest_selected_bonsai -= cols;
         } else {
             let rem = count % cols;
             let last_row_start = count - rem;
-            let target = last_row_start + self.bosque_selected_bonsai;
+            let target = last_row_start + self.forest_selected_bonsai;
             if target >= count {
-                self.bosque_selected_bonsai = target.saturating_sub(cols);
+                self.forest_selected_bonsai = target.saturating_sub(cols);
             } else {
-                self.bosque_selected_bonsai = target;
+                self.forest_selected_bonsai = target;
             }
         }
     }
 
-    pub fn bosque_nav_down(&mut self) {
-        if self.bosque_level != BosqueLevel::Bonsai { return; }
+    pub fn forest_nav_down(&mut self) {
+        if self.forest_level != ForestLevel::Bonsai { return; }
         let count = self.get_bonsai_count_for_selected_day();
         if count == 0 { return; }
-        let cols = self.bosque_cols.max(1);
+        let cols = self.forest_cols.max(1);
         
-        let target = self.bosque_selected_bonsai + cols;
+        let target = self.forest_selected_bonsai + cols;
         if target < count {
-            self.bosque_selected_bonsai = target;
+            self.forest_selected_bonsai = target;
         } else {
-            self.bosque_selected_bonsai = self.bosque_selected_bonsai % cols;
+            self.forest_selected_bonsai = self.forest_selected_bonsai % cols;
         }
     }
 }

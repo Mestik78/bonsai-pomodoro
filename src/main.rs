@@ -76,14 +76,14 @@ fn main() -> io::Result<()> {
 }
 
 fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, app: &mut App) -> io::Result<()> {
-    // Definimos un tick rate máximo de 33ms (~30 FPS) para que la animación sea fluida
+    // Define a maximum tick rate of 33ms (~30 FPS) for smooth animation
     let tick_rate = Duration::from_millis(33);
 
     loop {
         terminal.draw(|f| ui::render(f, app))?;
 
-        // event::poll espera hasta `tick_rate` a ver si hay un evento de teclado.
-        // Si no hay evento, devuelve false y el loop continúa.
+        // event::poll waits up to `tick_rate` to see if there is a keyboard event.
+        // If there is no event, it returns false and the loop continues.
         if event::poll(tick_rate)? {
             if let Event::Key(key) = event::read()? {
                 if key.kind == KeyEventKind::Press {
@@ -92,15 +92,15 @@ fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, app: &mut App)
                             match key.code {
                                 KeyCode::Char('q') => app.quit(),
                                 KeyCode::Left => {
-                                    if app.current_tab == 1 && app.bosque_level == crate::app::BosqueLevel::Bonsai {
-                                        app.bosque_nav_left();
+                                    if app.current_tab == 1 && app.forest_level == crate::app::ForestLevel::Bonsai {
+                                        app.forest_nav_left();
                                     } else {
                                         app.previous_tab();
                                     }
                                 },
                                 KeyCode::Right => {
-                                    if app.current_tab == 1 && app.bosque_level == crate::app::BosqueLevel::Bonsai {
-                                        app.bosque_nav_right();
+                                    if app.current_tab == 1 && app.forest_level == crate::app::ForestLevel::Bonsai {
+                                        app.forest_nav_right();
                                     } else {
                                         app.next_tab();
                                     }
@@ -125,10 +125,10 @@ fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, app: &mut App)
                                             app.add_minutes(1);
                                         }
                                     } else if app.current_tab == 1 {
-                                        if app.bosque_level == crate::app::BosqueLevel::Bonsai {
-                                            app.bosque_nav_up();
+                                        if app.forest_level == crate::app::ForestLevel::Bonsai {
+                                            app.forest_nav_up();
                                         } else {
-                                            app.bosque_previous();
+                                            app.forest_previous();
                                         }
                                     }
                                 },
@@ -140,21 +140,21 @@ fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, app: &mut App)
                                             app.add_minutes(-1);
                                         }
                                     } else if app.current_tab == 1 {
-                                        if app.bosque_level == crate::app::BosqueLevel::Bonsai {
-                                            app.bosque_nav_down();
+                                        if app.forest_level == crate::app::ForestLevel::Bonsai {
+                                            app.forest_nav_down();
                                         } else {
-                                            app.bosque_next();
+                                            app.forest_next();
                                         }
                                     }
                                 },
                                 KeyCode::Enter => {
                                     if app.current_tab == 1 {
-                                        app.bosque_enter();
+                                        app.forest_enter();
                                     }
                                 },
                                 KeyCode::Esc => {
                                     if app.current_tab == 1 {
-                                        app.bosque_escape();
+                                        app.forest_escape();
                                     }
                                 },
                                 _ => {}
@@ -188,7 +188,7 @@ fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, app: &mut App)
             }
         }
 
-        // Llamamos a on_tick para que la app descuente el tiempo si procede
+        // Call on_tick so the app deducts time if applicable
         app.on_tick();
 
         if app.should_quit {
