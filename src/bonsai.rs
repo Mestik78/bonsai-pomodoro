@@ -175,11 +175,9 @@ impl BonsaiCanvas {
     }
 }
 
-pub fn generate_bonsai(seed: u64, progress: f32, size_factor: f32) -> BonsaiCanvas {
-    let life = (32.0 * size_factor).round() as i32;
-    let life = life.clamp(3, 45);
-    let multiplier = (5.0 * size_factor).round() as i32;
-    let multiplier = multiplier.clamp(1, 8);
+pub fn generate_bonsai(seed: u64, progress: f32) -> BonsaiCanvas {
+    let life = 32;
+    let multiplier = 5;
     
     // First pass: find total steps
     let mut dummy_canvas = BonsaiCanvas::new();
