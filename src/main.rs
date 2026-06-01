@@ -9,7 +9,7 @@ use crossterm::{
 };
 use ratatui::{backend::CrosstermBackend, Terminal};
 
-use crate::app::App;
+use crate::app::{App, AppMode};
 
 fn main() -> io::Result<()> {
     // Setup terminal
@@ -52,40 +52,67 @@ fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, app: &mut App)
         if event::poll(tick_rate)? {
             if let Event::Key(key) = event::read()? {
                 if key.kind == KeyEventKind::Press {
-                    match key.code {
-                        KeyCode::Char('q') => app.quit(),
-                        KeyCode::Left => app.previous_tab(),
-                        KeyCode::Right | KeyCode::Tab => app.next_tab(),
-                        KeyCode::Char(' ') => app.toggle_timer(),
-                        KeyCode::Char('r') => {
-                            if app.current_tab == 0 {
-                                app.reset_timer();
+                    match app.mode {
+                        AppMode::Normal => {
+                            match key.code {
+                                KeyCode::Char('q') => app.quit(),
+                                KeyCode::Left => app.previous_tab(),
+                                KeyCode::Right | KeyCode::Tab => app.next_tab(),
+                                KeyCode::Char(' ') => app.toggle_timer(),
+                                KeyCode::Char('r') => {
+                                    if app.current_tab == 0 {
+                                        app.reset_timer();
+                                    }
+                                },
+                                KeyCode::Char('f') => {
+                                    if app.current_tab == 0 {
+                                        app.finish_early();
+                                    }
+                                },
+                                KeyCode::Up => {
+                                    if app.current_tab == 0 {
+                                        if key.modifiers.contains(KeyModifiers::CONTROL) {
+                                            app.add_seconds(1);
+                                        } else {
+                                            app.add_minutes(1);
+                                        }
+                                    }
+                                },
+                                KeyCode::Down => {
+                                    if app.current_tab == 0 {
+                                        if key.modifiers.contains(KeyModifiers::CONTROL) {
+                                            app.add_seconds(-1);
+                                        } else {
+                                            app.add_minutes(-1);
+                                        }
+                                    }
+                                },
+                                _ => {}
                             }
                         },
-                        KeyCode::Char('f') => {
-                            if app.current_tab == 0 {
-                                app.finish_early();
+                        AppMode::PostTimerInput { .. } => {
+                            match key.code {
+                                KeyCode::Char(c) => app.input_char(c),
+                                KeyCode::Backspace => app.input_backspace(),
+                                KeyCode::BackTab => app.input_tab(true),
+                                KeyCode::Tab => {
+                                    if key.modifiers.contains(KeyModifiers::CONTROL) {
+                                        app.input_tab(true);
+                                    } else {
+                                        app.input_tab(false);
+                                    }
+                                },
+                                KeyCode::Enter => {
+                                    if key.modifiers.contains(KeyModifiers::SHIFT) {
+                                        app.input_char('\n');
+                                    } else {
+                                        app.submit_input();
+                                    }
+                                },
+                                KeyCode::Esc => app.submit_input(),
+                                _ => {}
                             }
-                        },
-                        KeyCode::Up => {
-                            if app.current_tab == 0 {
-                                if key.modifiers.contains(KeyModifiers::CONTROL) {
-                                    app.add_seconds(1);
-                                } else {
-                                    app.add_minutes(1);
-                                }
-                            }
-                        },
-                        KeyCode::Down => {
-                            if app.current_tab == 0 {
-                                if key.modifiers.contains(KeyModifiers::CONTROL) {
-                                    app.add_seconds(-1);
-                                } else {
-                                    app.add_minutes(-1);
-                                }
-                            }
-                        },
-                        _ => {}
+                        }
                     }
                 }
             }

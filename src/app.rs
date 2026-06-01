@@ -4,6 +4,17 @@ use std::fs;
 use directories::ProjectDirs;
 use chrono::Utc;
 
+#[derive(PartialEq)]
+pub enum AppMode {
+    Normal,
+    PostTimerInput {
+        title: String,
+        description: String,
+        focus: u8,
+    }
+}
+
+
 #[derive(Serialize, Deserialize, Clone, PartialEq)]
 pub enum TimerState {
     New,
@@ -27,6 +38,12 @@ pub struct TimerSession {
 
     #[serde(rename = "actual-runtime", skip_serializing_if = "Option::is_none")]
     pub actual_runtime: Option<u64>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Default)]
@@ -41,6 +58,7 @@ pub struct App {
     pub tab_titles: Vec<&'static str>,
     pub timers: Vec<TimerSession>,
     pub last_tick: Instant,
+    pub mode: AppMode,
 }
 
 impl App {
@@ -87,6 +105,8 @@ impl App {
                 state: Some(TimerState::New),
                 time_left: Some(new_duration),
                 actual_runtime: None,
+                title: None,
+                description: None,
             });
         }
 
@@ -96,6 +116,7 @@ impl App {
             tab_titles: vec!["Temporizador", "Bosque"],
             timers,
             last_tick: Instant::now(),
+            mode: AppMode::Normal,
         }
     }
 
@@ -141,6 +162,8 @@ impl App {
                     state: Some(TimerState::New),
                     time_left: Some(duration),
                     actual_runtime: None,
+                    title: None,
+                    description: None,
                 });
             }
         }
@@ -211,6 +234,11 @@ impl App {
             }
         }
         if just_finished {
+            self.mode = AppMode::PostTimerInput {
+                title: String::new(),
+                description: String::new(),
+                focus: 0,
+            };
             self.save_state();
         }
     }
@@ -243,6 +271,11 @@ impl App {
                 self.last_tick += std::time::Duration::from_secs(elapsed);
                 
                 if just_finished {
+                    self.mode = AppMode::PostTimerInput {
+                        title: String::new(),
+                        description: String::new(),
+                        focus: 0,
+                    };
                     self.save_state();
                 }
             }
@@ -263,5 +296,57 @@ impl App {
 
     pub fn quit(&mut self) {
         self.should_quit = true;
+    }
+
+    pub fn input_char(&mut self, c: char) {
+        if let AppMode::PostTimerInput { ref mut title, ref mut description, focus } = self.mode {
+            if c == '\n' && focus == 0 {
+                return;
+            }
+            if focus == 0 {
+                title.push(c);
+            } else {
+                description.push(c);
+            }
+        }
+    }
+
+    pub fn input_backspace(&mut self) {
+        if let AppMode::PostTimerInput { ref mut title, ref mut description, focus } = self.mode {
+            if focus == 0 {
+                title.pop();
+            } else {
+                description.pop();
+            }
+        }
+    }
+
+    pub fn input_tab(&mut self, reverse: bool) {
+        if let AppMode::PostTimerInput { ref mut focus, .. } = self.mode {
+            if reverse {
+                *focus = if *focus == 0 { 1 } else { *focus - 1 };
+            } else {
+                *focus = (*focus + 1) % 2;
+            }
+        }
+    }
+
+    pub fn submit_input(&mut self) {
+        let (t, d) = if let AppMode::PostTimerInput { ref title, ref description, .. } = self.mode {
+            (title.clone(), description.clone())
+        } else {
+            return;
+        };
+
+        let timer = self.active_timer_mut();
+        if !t.is_empty() {
+            timer.title = Some(t);
+        }
+        if !d.is_empty() {
+            timer.description = Some(d);
+        }
+        
+        self.save_state();
+        self.mode = AppMode::Normal;
     }
 }

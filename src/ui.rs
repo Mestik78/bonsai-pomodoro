@@ -7,7 +7,7 @@ use ratatui::{
 };
 use tui_big_text::{BigText, PixelSize};
 
-use crate::app::{App, TimerState};
+use crate::app::{App, TimerState, AppMode};
 
 pub fn render(frame: &mut Frame, app: &App) {
     let chunks = Layout::default()
@@ -37,6 +37,41 @@ pub fn render(frame: &mut Frame, app: &App) {
     // Renderizamos el marco interno general
     frame.render_widget(inner_block.clone(), chunks[1]);
     let inner_area = inner_block.inner(chunks[1]);
+
+    if let AppMode::PostTimerInput { title, description, focus } = &app.mode {
+        let input_chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .margin(2)
+            .constraints([
+                Constraint::Length(1), // Help text
+                Constraint::Length(3), // Title
+                Constraint::Length(6), // Description
+                Constraint::Min(0),
+            ])
+            .split(inner_area);
+        
+        let help_p = Paragraph::new("¡Pomodoro finalizado! Presiona Tab para cambiar de campo, Enter para guardar.")
+            .alignment(Alignment::Center)
+            .style(Style::default().fg(Color::Cyan));
+        frame.render_widget(help_p, input_chunks[0]);
+
+        let title_style = if *focus == 0 { Style::default().fg(Color::Yellow) } else { Style::default().fg(Color::DarkGray) };
+        let title_cursor = if *focus == 0 { "_" } else { "" };
+        let title_p = Paragraph::new(format!("{}{}", title, title_cursor))
+            .block(Block::default().borders(Borders::ALL).title(" Título "))
+            .style(title_style);
+        frame.render_widget(title_p, input_chunks[1]);
+
+        let desc_style = if *focus == 1 { Style::default().fg(Color::Yellow) } else { Style::default().fg(Color::DarkGray) };
+        let desc_cursor = if *focus == 1 { "_" } else { "" };
+        let desc_p = Paragraph::new(format!("{}{}", description, desc_cursor))
+            .block(Block::default().borders(Borders::ALL).title(" Descripción "))
+            .style(desc_style)
+            .wrap(ratatui::widgets::Wrap { trim: false });
+        frame.render_widget(desc_p, input_chunks[2]);
+
+        return;
+    }
 
     match app.current_tab {
         0 => {
