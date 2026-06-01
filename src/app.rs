@@ -550,7 +550,7 @@ impl App {
     pub fn stats_next(&mut self) {
         let i = match self.stats_state.selected() {
             Some(i) => {
-                if i >= 2 {
+                if i >= 3 {
                     0
                 } else {
                     i + 1
@@ -565,7 +565,7 @@ impl App {
         let i = match self.stats_state.selected() {
             Some(i) => {
                 if i == 0 {
-                    2
+                    3
                 } else {
                     i - 1
                 }
