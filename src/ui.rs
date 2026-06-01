@@ -9,6 +9,7 @@ use tui_big_text::{BigText, PixelSize};
 use chrono::DateTime;
 
 use crate::app::{App, TimerState, AppMode, TimerSession};
+use crate::bonsai;
 
 pub fn render(frame: &mut Frame, app: &mut App) {
     let chunks = Layout::default()
@@ -76,68 +77,98 @@ pub fn render(frame: &mut Frame, app: &mut App) {
 
     match app.current_tab {
         0 => {
-            // Pestaña Temporizador
-            let timer = app.active_timer();
-            let time_left = timer.time_left.unwrap_or(0);
-            let minutes = time_left / 60;
-            let seconds = time_left % 60;
-            let timer_text = format!("{:02}:{:02}", minutes, seconds);
-
-            // Dividimos verticalmente para centrar el BigText y los mensajes
+            // Split main area horizontally: left for timer, right for bonsai
+            let horiz_chunks = Layout::default()
+                .direction(Direction::Horizontal)
+                .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+                .split(inner_area);
+                
             let vert_chunks = Layout::default()
                 .direction(Direction::Vertical)
                 .constraints([
-                    Constraint::Min(0),      // padding superior
-                    Constraint::Length(8),   // espacio para BigText
-                    Constraint::Length(2),   // espacio vacío
-                    Constraint::Length(1),   // [ CORRIENDO ]
-                    Constraint::Length(2),   // espacio vacío
-                    Constraint::Length(1),   // instrucciones
-                    Constraint::Min(0),      // padding inferior
+                    Constraint::Min(0),
+                    Constraint::Length(8), // Timer
+                    Constraint::Length(1), // Spacer
+                    Constraint::Length(1), // Status
+                    Constraint::Min(0),
+                    Constraint::Length(1), // Help
                 ])
-                .split(inner_area);
+                .split(horiz_chunks[0]);
 
-            // BigText ocupa todo el ancho y se ajusta a la izquierda por defecto.
-            // Para centrarlo horizontalmente, hacemos otra división en la fila del BigText:
-            let horiz_chunks = Layout::default()
-                .direction(Direction::Horizontal)
-                .constraints([
-                    Constraint::Min(0),
-                    Constraint::Length(39),  // Ajustado al ancho de "MM:SS"
-                    Constraint::Min(0),
-                ])
-                .split(vert_chunks[1]);
+            let active_timer = app.active_timer();
+            let state_str = match active_timer.state {
+                Some(TimerState::New) => "Nuevo",
+                Some(TimerState::Running) => "Corriendo",
+                Some(TimerState::Paused) => "Pausado",
+                None => "Finalizado",
+            };
+
+            // Calculate formatted time
+            let time_to_show = if active_timer.state == Some(TimerState::Running) {
+                let now = std::time::Instant::now();
+                let elapsed = now.duration_since(app.last_tick).as_secs();
+                active_timer.time_left.unwrap_or(active_timer.duration).saturating_sub(elapsed)
+            } else {
+                active_timer.time_left.unwrap_or(active_timer.duration)
+            };
+            
+            let minutes = time_to_show / 60;
+            let seconds = time_to_show % 60;
+            let time_str = format!("{:02}:{:02}", minutes, seconds);
 
             let big_text = BigText::builder()
                 .pixel_size(PixelSize::Full)
-                .style(Style::default().fg(Color::White))
-                .lines(vec![timer_text.into()])
+                .style(Style::default().fg(Color::Green))
+                .lines(vec![time_str.into()])
                 .build();
 
-            frame.render_widget(big_text, horiz_chunks[1]);
+            frame.render_widget(big_text, vert_chunks[1]);
 
-            // Indicador de estado
-            let status_text = match timer.state {
-                Some(TimerState::New) => "[ NUEVO ]",
-                Some(TimerState::Running) => "[ CORRIENDO ]",
-                Some(TimerState::Paused) => "[ PAUSADO ]",
-                None => "[ FINALIZADO ]",
+            let status_text = match app.mode {
+                AppMode::Normal => state_str,
+                _ => "Introduciendo datos...",
             };
-            let status_color = match timer.state {
-                Some(TimerState::New) => Color::Cyan,
-                Some(TimerState::Running) => Color::Green,
-                Some(TimerState::Paused) => Color::Yellow,
-                None => Color::Red,
+            let status_color = match app.mode {
+                AppMode::Normal => Color::White,
+                _ => Color::Yellow,
             };
-            let status_p = Paragraph::new(Span::styled(status_text, Style::default().fg(status_color).add_modifier(Modifier::BOLD)))
+            let status_p = Paragraph::new(Span::styled(status_text, Style::default().fg(status_color).add_modifier(ratatui::style::Modifier::BOLD)))
                 .alignment(Alignment::Center);
             frame.render_widget(status_p, vert_chunks[3]);
 
-            // Instrucciones
             let help_text = "Espacio: Pausar/Reanudar  |  Arr/Aba: Ajustar Minuto  |  Izq/Der: Cambiar Pestaña";
             let help_p = Paragraph::new(Span::styled(help_text, Style::default().fg(Color::DarkGray)))
                 .alignment(Alignment::Center);
             frame.render_widget(help_p, vert_chunks[5]);
+            
+            // Draw Bonsai in right chunk
+            let seed = active_timer.seed;
+            // The active tree grows based on time spent. 
+            // If duration is 25 min, max life is 32. 
+            // So life = (1.0 - time_left / duration) * 32
+            // Wait, just grow it fully if we want. Let's make it grow over time!
+            let progress = 1.0 - (time_to_show as f32 / active_timer.duration as f32).clamp(0.0, 1.0);
+            let life = (progress * 32.0) as i32;
+            let life = life.max(4); // minimum life
+            
+            let canvas = bonsai::generate_bonsai(seed, life, 5);
+            let bonsai_lines = canvas.render(1.0);
+            
+            let bonsai_p = Paragraph::new(bonsai_lines.clone())
+                .alignment(Alignment::Center)
+                .block(Block::default().borders(Borders::ALL).title(" Tu Bonsái "));
+                
+            let right_height = horiz_chunks[1].height;
+            let bonsai_height = (bonsai_lines.len() as u16 + 2).min(right_height);
+            let right_vert_chunks = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([
+                    Constraint::Min(0),
+                    Constraint::Length(bonsai_height),
+                ])
+                .split(horiz_chunks[1]);
+                
+            frame.render_widget(bonsai_p, right_vert_chunks[1]);
         },
         1 => {
             let finished_timers: Vec<&TimerSession> = app.timers.iter().filter(|t| t.state.is_none()).collect();
@@ -164,12 +195,19 @@ pub fn render(frame: &mut Frame, app: &mut App) {
                     let mut text_lines = vec![
                         ratatui::text::Line::from(ratatui::text::Span::styled(
                             header,
-                            Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)
+                            Style::default().fg(Color::Green).add_modifier(ratatui::style::Modifier::BOLD)
                         ))
                     ];
                     
                     if let Some(desc) = &t.description {
                         text_lines.push(ratatui::text::Line::from(desc.as_str()));
+                    }
+                    
+                    // Render mini bonsai
+                    let mini_canvas = bonsai::generate_bonsai(t.seed, 32, 5);
+                    let mini_lines = mini_canvas.render(0.5);
+                    for line in mini_lines {
+                        text_lines.push(line);
                     }
                     
                     ListItem::new(text_lines)

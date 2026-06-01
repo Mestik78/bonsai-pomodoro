@@ -1,5 +1,6 @@
 mod app;
 mod ui;
+mod bonsai;
 
 use std::{io, time::Duration};
 use crossterm::{
@@ -14,6 +15,37 @@ use crate::app::{App, AppMode};
 fn main() -> io::Result<()> {
     let args: Vec<String> = std::env::args().collect();
     let is_production = args.contains(&"--user".to_string());
+    
+    if args.contains(&"--bonsai".to_string()) {
+        let seed = args.iter().position(|a| a == "--seed")
+            .and_then(|i| args.get(i + 1))
+            .and_then(|s| s.parse::<u64>().ok())
+            .unwrap_or_else(|| rand::random());
+            
+        let zoom = args.iter().position(|a| a == "--zoom")
+            .and_then(|i| args.get(i + 1))
+            .and_then(|s| s.parse::<f32>().ok())
+            .unwrap_or(1.0);
+            
+        let canvas = bonsai::generate_bonsai(seed, 32, 5);
+        let lines = canvas.render(zoom);
+        for line in lines {
+            for span in line.spans {
+                if let Some(c) = span.style.fg {
+                    match c {
+                        ratatui::style::Color::Green | ratatui::style::Color::LightGreen => print!("\x1b[32m"),
+                        ratatui::style::Color::DarkGray => print!("\x1b[90m"),
+                        ratatui::style::Color::Rgb(r, g, b) => print!("\x1b[38;2;{};{};{}m", r, g, b),
+                        _ => print!("\x1b[0m"),
+                    }
+                }
+                print!("{}", span.content);
+                print!("\x1b[0m");
+            }
+            println!();
+        }
+        return Ok(());
+    }
 
     // Setup terminal
     enable_raw_mode()?;

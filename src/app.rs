@@ -45,6 +45,8 @@ pub struct TimerSession {
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
+
+    pub seed: u64,
 }
 
 #[derive(Serialize, Deserialize, Default)]
@@ -114,6 +116,7 @@ impl App {
                 actual_runtime: None,
                 title: None,
                 description: None,
+                seed: rand::random(),
             });
         }
 
@@ -179,6 +182,7 @@ impl App {
                     actual_runtime: None,
                     title: None,
                     description: None,
+                    seed: rand::random(),
                 });
             }
         }
