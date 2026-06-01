@@ -90,7 +90,7 @@ pub fn render(frame: &mut Frame, app: &mut App) {
         } else {
             1.0
         };
-        let bonsai_lines = canvas.render(zoom);
+        let bonsai_lines = canvas.render(zoom, None);
         
         let bonsai_p = Paragraph::new(bonsai_lines.clone())
             .alignment(Alignment::Center);
@@ -187,7 +187,7 @@ pub fn render(frame: &mut Frame, app: &mut App) {
             } else {
                 1.0
             };
-            let bonsai_lines = canvas.render(zoom);
+            let bonsai_lines = canvas.render(zoom, None);
             
             let bonsai_p = Paragraph::new(bonsai_lines.clone())
                 .alignment(Alignment::Center);
@@ -308,7 +308,7 @@ pub fn render(frame: &mut Frame, app: &mut App) {
                 let mut target_line_idx = 0;
                 let mut current_line = 0;
                 
-                for (day_idx, date_str) in days_order.into_iter().enumerate() {
+                for (day_idx, date_str) in days_order.iter().enumerate() {
                     let is_selected = day_idx == selected_idx;
                     let title_style = if is_selected {
                         if app.bosque_level == crate::app::BosqueLevel::Bonsai {
@@ -331,7 +331,7 @@ pub fn render(frame: &mut Frame, app: &mut App) {
                     items.push(ListItem::new(ratatui::text::Line::from(""))); // Spacer
                     current_line += 1;
                     
-                    let timers_for_day = days_map.get(&date_str).unwrap();
+                    let timers_for_day = days_map.get(date_str).unwrap();
                     
                     let mut timer_blocks: Vec<Vec<ratatui::text::Line>> = Vec::new();
                     for (t_idx, t) in timers_for_day.iter().enumerate() {
@@ -356,7 +356,7 @@ pub fn render(frame: &mut Frame, app: &mut App) {
                         let x = (d / 3000.0).clamp(0.0, 1.0);
                         let progress = (x * x * (3.0 - 2.0 * x)) as f32;
                         let mini_canvas = bonsai::generate_bonsai(t.seed, progress);
-                        let mini_lines = mini_canvas.render(0.25);
+                        let mini_lines = mini_canvas.render(0.5, None);
                         
                         let mut block_lines = Vec::new();
                         block_lines.push(ratatui::text::Line::from(ratatui::text::Span::styled(header1, header_style)));
@@ -368,7 +368,11 @@ pub fn render(frame: &mut Frame, app: &mut App) {
                     
                     let block_width = 25;
                     let max_height = timer_blocks.iter().map(|b| b.len()).max().unwrap_or(0);
-                    let available_width = inner_area.width as usize;
+                    let available_width = if app.bosque_level == crate::app::BosqueLevel::Bonsai {
+                        (inner_area.width * 65 / 100) as usize
+                    } else {
+                        inner_area.width as usize
+                    };
                     let cols = (available_width / block_width).max(1);
                     
                     if is_selected {
@@ -405,10 +409,96 @@ pub fn render(frame: &mut Frame, app: &mut App) {
                 
                 app.bosque_state.select(Some(target_line_idx));
                 let list = List::new(items)
-                    .block(Block::default().borders(Borders::ALL).title(" Bosque "))
+                    .block(Block::default())
                     .style(Style::default().fg(Color::White));
                     
-                frame.render_stateful_widget(list, inner_area, &mut app.bosque_state);
+                if app.bosque_level == crate::app::BosqueLevel::Bonsai {
+                    let chunks = Layout::default()
+                        .direction(Direction::Horizontal)
+                        .constraints([Constraint::Percentage(65), Constraint::Percentage(35)])
+                        .split(inner_area);
+                        
+                    frame.render_stateful_widget(list, chunks[0], &mut app.bosque_state);
+                    
+                    let details_block = Block::default()
+                        .borders(Borders::LEFT)
+                        .border_style(Style::default().fg(Color::DarkGray));
+                    
+                    let details_area = details_block.inner(chunks[1]);
+                    frame.render_widget(details_block, chunks[1]);
+                    
+                    if selected_idx < days_order.len() {
+                        let selected_day_str = &days_order[selected_idx];
+                        if let Some(timers_for_day) = days_map.get(selected_day_str) {
+                            if app.bosque_selected_bonsai < timers_for_day.len() {
+                                let selected_bonsai = timers_for_day[app.bosque_selected_bonsai];
+                                
+                                let title = selected_bonsai.title.as_deref().unwrap_or("Sin título");
+                                let desc = selected_bonsai.description.as_deref().unwrap_or("Sin descripción");
+                                
+                                let start_dt = chrono::DateTime::parse_from_rfc3339(&selected_bonsai.start_time).ok();
+                                let date_str = start_dt.map(|dt| dt.format("%Y-%m-%d").to_string()).unwrap_or_default();
+                                let time_str = start_dt.map(|dt| dt.format("%H:%M").to_string()).unwrap_or_default();
+                                
+                                let duration = selected_bonsai.actual_runtime.unwrap_or(selected_bonsai.duration);
+                                let mins = duration / 60;
+                                let secs = duration % 60;
+                                let duration_str = format!("{:02}:{:02}", mins, secs);
+
+                                let d = (duration as f64).max(0.0);
+                                let x = (d / 3000.0).clamp(0.0, 1.0);
+                                let progress = (x * x * (3.0 - 2.0 * x)) as f32;
+                                let canvas = bonsai::generate_bonsai(selected_bonsai.seed, progress);
+                                
+                                let zoom = if details_area.width < 21 {
+                                    0.25
+                                } else if details_area.width < 31 {
+                                    0.5
+                                } else {
+                                    1.0
+                                };
+                                let bonsai_lines = canvas.render(zoom, Some(duration_str.clone()));
+                                
+                                let bonsai_height = bonsai_lines.len() as u16;
+                                let bottom_height = bonsai_height + 4;
+                                
+                                let details_text = vec![
+                                    ratatui::text::Line::from(ratatui::text::Span::styled(title, Style::default().fg(Color::Yellow).add_modifier(ratatui::style::Modifier::BOLD))),
+                                    ratatui::text::Line::from(""),
+                                    ratatui::text::Line::from(desc),
+                                    ratatui::text::Line::from(""),
+                                    ratatui::text::Line::from(ratatui::text::Span::styled(format!("{} {}", date_str, time_str), Style::default().fg(Color::DarkGray))),
+                                ];
+                                
+                                let top_p = Paragraph::new(details_text)
+                                    .alignment(Alignment::Center)
+                                    .wrap(ratatui::widgets::Wrap { trim: false });
+                                    
+                                let mut bottom_text = Vec::new();
+                                for line in bonsai_lines {
+                                    bottom_text.push(line);
+                                }
+                                
+                                let bottom_p = Paragraph::new(bottom_text)
+                                    .alignment(Alignment::Center);
+                                    
+                                let details_vert = Layout::default()
+                                    .direction(Direction::Vertical)
+                                    .margin(1)
+                                    .constraints([
+                                        Constraint::Min(0),
+                                        Constraint::Length(bottom_height),
+                                    ])
+                                    .split(details_area);
+                                    
+                                frame.render_widget(top_p, details_vert[0]);
+                                frame.render_widget(bottom_p, details_vert[1]);
+                            }
+                        }
+                    }
+                } else {
+                    frame.render_stateful_widget(list, inner_area, &mut app.bosque_state);
+                }
             }
         },
         _ => unreachable!(),

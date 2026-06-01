@@ -30,7 +30,7 @@ impl BonsaiCanvas {
     }
     
     // Renders as a list of lines for ratatui
-    pub fn render(&self, zoom: f32) -> Vec<ratatui::text::Line<'static>> {
+    pub fn render(&self, zoom: f32, label: Option<String>) -> Vec<ratatui::text::Line<'static>> {
         let mut lines = Vec::new();
         
         let min_x = self.cells.keys().map(|k| k.0).min().unwrap_or(0);
@@ -63,33 +63,43 @@ impl BonsaiCanvas {
             
             let has_tree = self.cells.len() > 1;
             
-            let pot_lines = if !has_tree {
-                vec![
-                    vec![
-                        (":", color_text), ("_____________________________", color_leaf), (":", color_text)
-                    ],
-                    vec![(" \\                           / ", color_text)],
-                    vec![("  \\_________________________/  ", color_text)],
-                    vec![("  (_)                     (_)  ", color_text)]
-                ]
+            let mut pot_lines: Vec<Vec<(String, Color)>> = Vec::new();
+            
+            if !has_tree {
+                pot_lines.push(vec![
+                    (":".to_string(), color_text), ("_____________________________".to_string(), color_leaf), (":".to_string(), color_text)
+                ]);
             } else {
-                vec![
-                    vec![
-                        (":", color_text), ("___________", color_leaf), (".", color_wood), ("/", color_wood), 
-                        ("~~~", color_wood), ("\\", color_wood), (".", color_wood), ("___________", color_leaf), (":", color_text)
-                    ],
-                    vec![(" \\                           / ", color_text)],
-                    vec![("  \\_________________________/  ", color_text)],
-                    vec![("  (_)                     (_)  ", color_text)]
-                ]
-            };
+                pot_lines.push(vec![
+                    (":".to_string(), color_text), ("___________".to_string(), color_leaf), (".".to_string(), color_wood), ("/".to_string(), color_wood), 
+                    ("~~~".to_string(), color_wood), ("\\".to_string(), color_wood), (".".to_string(), color_wood), ("___________".to_string(), color_leaf), (":".to_string(), color_text)
+                ]);
+            }
+            
+            let mut line2 = " \\                           / ".to_string();
+            if let Some(ref lbl) = label {
+                let lbl_len = lbl.chars().count();
+                let spaces = 27;
+                if lbl_len <= spaces {
+                    let pad_left = (spaces - lbl_len) / 2;
+                    let mut new_line2 = String::from(" \\");
+                    new_line2.push_str(&" ".repeat(pad_left));
+                    new_line2.push_str(lbl);
+                    new_line2.push_str(&" ".repeat(spaces - pad_left - lbl_len));
+                    new_line2.push_str("/ ");
+                    line2 = new_line2;
+                }
+            }
+            pot_lines.push(vec![(line2, color_text)]);
+            pot_lines.push(vec![("  \\_________________________/  ".to_string(), color_text)]);
+            pot_lines.push(vec![("  (_)                     (_)  ".to_string(), color_text)]);
             
             for line_parts in pot_lines {
                 let mut spans = Vec::new();
                 let pad = center_idx.saturating_sub(15);
                 spans.push(ratatui::text::Span::raw(" ".repeat(pad)));
                 for (s, c) in line_parts {
-                    spans.push(ratatui::text::Span::styled(s.to_string(), ratatui::style::Style::default().fg(c)));
+                    spans.push(ratatui::text::Span::styled(s, ratatui::style::Style::default().fg(c)));
                 }
                 lines.push(ratatui::text::Line::from(spans));
             }
@@ -150,15 +160,29 @@ impl BonsaiCanvas {
             let color_text = Color::DarkGray;
             
             let pot_lines = if zoom >= 0.5 {
+                let mut l1 = "  \\_________/  ".to_string();
+                if let Some(ref lbl) = label {
+                    let lbl_len = lbl.chars().count();
+                    let spaces = 9;
+                    if lbl_len <= spaces {
+                        let pad_left = (spaces - lbl_len) / 2;
+                        let mut new_l1 = String::from("  \\");
+                        new_l1.push_str(&" ".repeat(pad_left));
+                        new_l1.push_str(lbl);
+                        new_l1.push_str(&" ".repeat(spaces - pad_left - lbl_len));
+                        new_l1.push_str("/  ");
+                        l1 = new_l1;
+                    }
+                }
                 vec![
-                    " (___________) ",
-                    "  \\_________/  ",
-                    "    (_) (_)    ",
+                    " (___________) ".to_string(),
+                    l1,
+                    "    (_) (_)    ".to_string(),
                 ]
             } else {
                 vec![
-                    " \\___/ ",
-                    "  (_)  ",
+                    " \\___/ ".to_string(),
+                    "  (_)  ".to_string(),
                 ]
             };
             
@@ -166,7 +190,7 @@ impl BonsaiCanvas {
                 let mut spans = Vec::new();
                 let pad = center_idx.saturating_sub(s.len() / 2);
                 spans.push(ratatui::text::Span::raw(" ".repeat(pad)));
-                spans.push(ratatui::text::Span::styled(s.to_string(), ratatui::style::Style::default().fg(color_text)));
+                spans.push(ratatui::text::Span::styled(s, ratatui::style::Style::default().fg(color_text)));
                 lines.push(ratatui::text::Line::from(spans));
             }
         }

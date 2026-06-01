@@ -28,7 +28,7 @@ fn main() -> io::Result<()> {
             .unwrap_or(1.0);
             
         let canvas = bonsai::generate_bonsai(seed, 1.0);
-        let lines = canvas.render(zoom);
+        let lines = canvas.render(zoom, None);
         for line in lines {
             for span in line.spans {
                 if let Some(c) = span.style.fg {

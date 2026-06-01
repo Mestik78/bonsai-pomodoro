@@ -212,7 +212,7 @@ impl App {
 
     pub fn add_minutes(&mut self, minutes: i64) {
         let timer = self.active_timer_mut();
-        if timer.state == Some(TimerState::Running) || timer.state.is_none() { return; }
+        if timer.state != Some(TimerState::New) { return; }
         
         let current_time = timer.time_left.unwrap_or(0);
         let current_minutes = (current_time as i64) / 60;
@@ -236,7 +236,7 @@ impl App {
 
     pub fn add_seconds(&mut self, seconds: i64) {
         let timer = self.active_timer_mut();
-        if timer.state == Some(TimerState::Running) || timer.state.is_none() { return; }
+        if timer.state != Some(TimerState::New) { return; }
         
         let current_time = timer.time_left.unwrap_or(0);
         let new_time_i = (current_time as i64) + seconds;
