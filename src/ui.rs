@@ -310,7 +310,8 @@ pub fn render(frame: &mut Frame, app: &mut App) {
                 let mut current_line = 0;
                 
                 let available_width = if app.forest_level == crate::app::ForestLevel::Bonsai {
-                    (inner_area.width * 65 / 100) as usize
+                    let prev_width = 20.max((inner_area.width as f32 * 0.45) as u16);
+                    inner_area.width.saturating_sub(prev_width) as usize
                 } else {
                     inner_area.width as usize
                 };
@@ -344,6 +345,11 @@ pub fn render(frame: &mut Frame, app: &mut App) {
                     let timers_for_day = days_map.get(date_str).unwrap();
                     
                     let mut timer_blocks: Vec<Vec<ratatui::text::Line>> = Vec::new();
+                    
+                    let list_zoom = if available_width < 35 { 0.25 } else { 0.5 };
+                    let block_width = if list_zoom == 0.25 { 15_usize } else { 25_usize };
+                    let target_tree_height = if list_zoom == 0.25 { 7_usize } else { 13_usize };
+                    
                     for (t_idx, t) in timers_for_day.iter().enumerate() {
                         let time_str = match chrono::DateTime::parse_from_rfc3339(&t.start_time) {
                             Ok(dt) => dt.format("%H:%M").to_string(),
@@ -361,11 +367,10 @@ pub fn render(frame: &mut Frame, app: &mut App) {
                         let mini_canvas = bonsai::generate_bonsai(t.seed, progress);
                         let is_bonsai_selected = is_selected && app.forest_level == crate::app::ForestLevel::Bonsai && t_idx == app.forest_selected_bonsai;
                         let pot_color = if is_bonsai_selected { Some(Color::Yellow) } else { None };
-                        let mini_lines = mini_canvas.render(0.5, Some(duration_str), pot_color);
+                        let mini_lines = mini_canvas.render(list_zoom, Some(duration_str), pot_color);
                         
                         let mut block_lines = Vec::new();
                         
-                        let target_tree_height = 13_usize;
                         let pad_count = target_tree_height.saturating_sub(mini_lines.len());
                         for _ in 0..pad_count {
                             block_lines.push(ratatui::text::Line::from(""));
@@ -377,9 +382,8 @@ pub fn render(frame: &mut Frame, app: &mut App) {
                         timer_blocks.push(block_lines);
                     }
                     
-                    let block_width = 25;
                     let max_height = timer_blocks.iter().map(|b| b.len()).max().unwrap_or(0);
-                    let cols = (available_width / block_width).max(1);
+                    let cols = (available_width as usize / block_width).max(1);
                     
                     if is_selected {
                         app.forest_cols = cols;
@@ -423,9 +427,12 @@ pub fn render(frame: &mut Frame, app: &mut App) {
                     .style(Style::default().fg(Color::White));
                     
                 if app.forest_level == crate::app::ForestLevel::Bonsai {
+                    let prev_width = 20.max((inner_area.width as f32 * 0.45) as u16);
+                    let list_width = inner_area.width.saturating_sub(prev_width);
+                    
                     let chunks = Layout::default()
                         .direction(Direction::Horizontal)
-                        .constraints([Constraint::Percentage(65), Constraint::Percentage(35)])
+                        .constraints([Constraint::Length(list_width), Constraint::Length(prev_width)])
                         .split(inner_area);
                         
                     frame.render_stateful_widget(list, chunks[0], &mut app.forest_state);
@@ -460,13 +467,15 @@ pub fn render(frame: &mut Frame, app: &mut App) {
                                 let progress = (x * x * (3.0 - 2.0 * x)) as f32;
                                 let canvas = bonsai::generate_bonsai(selected_bonsai.seed, progress);
                                 
-                                let zoom = if details_area.width < 21 {
+                                let preview_zoom: f32 = if details_area.width < 20 {
                                     0.25
-                                } else if details_area.width < 31 {
+                                } else if details_area.width < 40 {
                                     0.5
                                 } else {
                                     1.0
                                 };
+                                let list_zoom_val: f32 = if available_width < 35 { 0.25 } else { 0.5 };
+                                let zoom = preview_zoom.max(list_zoom_val);
                                 let bonsai_lines = canvas.render(zoom, Some(duration_str.clone()), None);
                                 
                                 let bonsai_height = bonsai_lines.len() as u16;

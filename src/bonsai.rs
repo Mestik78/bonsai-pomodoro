@@ -105,12 +105,18 @@ impl BonsaiCanvas {
             pot_lines.push(vec![("  \\_________________________/  ".to_string(), color_text)]);
             pot_lines.push(vec![("  (_)                     (_)  ".to_string(), color_text)]);
             
+            let total_cols = (min_x..=max_x).count();
             for line_parts in pot_lines {
                 let mut spans = Vec::new();
                 let pad = center_idx.saturating_sub(15);
                 spans.push(ratatui::text::Span::raw(" ".repeat(pad)));
+                let mut current_len = pad;
                 for (s, c) in line_parts {
+                    current_len += s.chars().count();
                     spans.push(ratatui::text::Span::styled(s, ratatui::style::Style::default().fg(c)));
+                }
+                if current_len < total_cols {
+                    spans.push(ratatui::text::Span::raw(" ".repeat(total_cols - current_len)));
                 }
                 lines.push(ratatui::text::Line::from(spans));
             }
@@ -191,7 +197,6 @@ impl BonsaiCanvas {
             
             // Draw Mini Pot based on zoom
             let center_idx = ((0 - min_x) / step_x).max(0) as usize;
-            let color_text = Color::DarkGray;
             
             let pot_lines = if zoom >= 0.5 {
                 let mut l1 = "  \\_________/  ".to_string();
@@ -215,12 +220,19 @@ impl BonsaiCanvas {
                 ]
             };
             
+            let total_cols = (min_x..=max_x).step_by(step_x as usize).count();
             let pot_c = pot_color.unwrap_or(Color::DarkGray);
             for s in pot_lines {
                 let mut spans = Vec::new();
-                let pad = center_idx.saturating_sub(s.len() / 2);
+                let pad = center_idx.saturating_sub(s.chars().count() / 2);
                 spans.push(ratatui::text::Span::raw(" ".repeat(pad)));
                 spans.push(ratatui::text::Span::styled(s.to_string(), ratatui::style::Style::default().fg(pot_c)));
+                
+                let current_len = pad + s.chars().count();
+                if current_len < total_cols {
+                    spans.push(ratatui::text::Span::raw(" ".repeat(total_cols - current_len)));
+                }
+                
                 lines.push(ratatui::text::Line::from(spans));
             }
         }
