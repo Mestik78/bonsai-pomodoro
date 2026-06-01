@@ -39,39 +39,56 @@ pub fn render(frame: &mut Frame, app: &mut App, inner_area: Rect) {
         
     frame.render_stateful_widget(list, chunks[0], &mut app.stats.list_state);
     
-    if app.stats.selected() == Some(0) {
+    let selected = app.stats.selected();
+    if selected == Some(0) || selected == Some(1) || selected == Some(2) {
         let finished_timers: Vec<&TimerSession> = app.timers.iter().filter(|t| t.state.is_none()).collect();
         
-        let mut days_map: std::collections::HashMap<String, u64> = std::collections::HashMap::new();
-        let mut days_order = Vec::new();
+        let mut group_map: std::collections::HashMap<String, u64> = std::collections::HashMap::new();
+        let mut group_order = Vec::new();
         
         for t in finished_timers {
             let date_str = match chrono::DateTime::parse_from_rfc3339(&t.start_time) {
-                Ok(dt) => dt.format("%m-%d").to_string(), // Short date for bar chart
+                Ok(dt) => {
+                    let dt_local = dt.with_timezone(&Local);
+                    if selected == Some(0) {
+                        dt_local.format("%m-%d").to_string() // e.g. 06-02
+                    } else if selected == Some(1) {
+                        format!("{:02}W{:02}", dt_local.iso_week().year() % 100, dt_local.iso_week().week()) // e.g. 26W22
+                    } else {
+                        dt_local.format("%y-%m").to_string() // e.g. 26-06
+                    }
+                },
                 Err(_) => t.start_time.chars().take(5).collect(),
             };
             
-            if !days_map.contains_key(&date_str) {
-                days_order.push(date_str.clone());
-                days_map.insert(date_str.clone(), 0);
+            if !group_map.contains_key(&date_str) {
+                group_order.push(date_str.clone());
+                group_map.insert(date_str.clone(), 0);
             }
             
             let duration = t.actual_runtime.unwrap_or(t.duration);
             let mins = duration / 60;
-            *days_map.get_mut(&date_str).unwrap() += mins;
+            *group_map.get_mut(&date_str).unwrap() += mins;
         }
         
-        days_order.reverse();
+        group_order.reverse();
         
-        let data: Vec<(&str, u64)> = days_order.iter()
-            .map(|day| {
-                (day.as_str(), *days_map.get(day).unwrap_or(&0))
+        let data: Vec<(&str, u64)> = group_order.iter()
+            .map(|key| {
+                (key.as_str(), *group_map.get(key).unwrap_or(&0))
             })
             .collect();
 
+        let title_str = match selected {
+            Some(0) => " Minutes per day ",
+            Some(1) => " Minutes per week ",
+            Some(2) => " Minutes per month ",
+            _ => " Minutes ",
+        };
+
         let right_block = Block::default()
             .borders(Borders::NONE)
-            .title(Span::styled(" Minutes per day ", Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)));
+            .title(Span::styled(title_str, Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)));
         
         if data.is_empty() {
             let p = Paragraph::new("No data available.")
@@ -80,13 +97,20 @@ pub fn render(frame: &mut Frame, app: &mut App, inner_area: Rect) {
             frame.render_widget(p, chunks[1]);
         } else {
             let bars: Vec<Bar> = data.iter().map(|(label, value)| {
-                let color = if *value >= 180 {
+                let (red_th, yellow_th, lg_th, g_th) = match selected {
+                    Some(0) => (180, 120, 60, 30),
+                    Some(1) => (180 * 5, 120 * 5, 60 * 5, 30 * 5),
+                    Some(2) => (180 * 20, 120 * 20, 60 * 20, 30 * 20),
+                    _ => (180, 120, 60, 30),
+                };
+
+                let color = if *value >= red_th {
                     Color::Red
-                } else if *value >= 120 {
+                } else if *value >= yellow_th {
                     Color::Yellow
-                } else if *value >= 60 {
+                } else if *value >= lg_th {
                     Color::LightGreen
-                } else if *value >= 30 {
+                } else if *value >= g_th {
                     Color::Green
                 } else {
                     Color::DarkGray
