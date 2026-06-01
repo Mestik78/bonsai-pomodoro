@@ -82,7 +82,10 @@ pub fn render(frame: &mut Frame, app: &mut App) {
         } else {
             1.0
         };
-        let canvas = bonsai::generate_bonsai(seed, progress);
+        
+        let d = (active_timer.duration as f64).max(1.0);
+        let size_factor = (d.ln() / 3000_f64.ln()) as f32;
+        let canvas = bonsai::generate_bonsai(seed, progress, size_factor);
         let bonsai_lines = canvas.render(1.0);
         
         let bonsai_p = Paragraph::new(bonsai_lines.clone())
@@ -155,7 +158,9 @@ pub fn render(frame: &mut Frame, app: &mut App) {
                 1.0 - (time_to_show as f32 / active_timer.duration as f32).clamp(0.0, 1.0)
             };
             
-            let mut canvas = bonsai::generate_bonsai(seed, progress);
+            let d = (active_timer.duration as f64).max(1.0);
+            let size_factor = (d.ln() / 3000_f64.ln()) as f32;
+            let mut canvas = bonsai::generate_bonsai(seed, progress, size_factor);
             
             if let Some(TimerState::Starting(ref start_time_str)) = active_timer.state {
                 if let Ok(start_time) = chrono::DateTime::parse_from_rfc3339(start_time_str) {
@@ -291,7 +296,9 @@ pub fn render(frame: &mut Frame, app: &mut App) {
                         
                         let header1 = format!("{}  {:02}:{:02}", time_str, mins, secs);
                         
-                        let mini_canvas = bonsai::generate_bonsai(t.seed, progress);
+                        let d = (t.duration as f64).max(1.0);
+                        let size_factor = (d.ln() / 3000_f64.ln()) as f32;
+                        let mini_canvas = bonsai::generate_bonsai(t.seed, progress, size_factor);
                         let mini_lines = mini_canvas.render(0.25);
                         
                         let mut block_lines = Vec::new();
