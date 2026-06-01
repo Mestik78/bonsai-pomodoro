@@ -2,7 +2,7 @@ use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, List, ListItem, Paragraph, Tabs},
+    widgets::{BarChart, Block, Borders, List, ListItem, Paragraph, Tabs},
     Frame,
 };
 use tui_big_text::{BigText, PixelSize};
@@ -553,10 +553,56 @@ pub fn render(frame: &mut Frame, app: &mut App) {
                 
             frame.render_stateful_widget(list, chunks[0], &mut app.stats_state);
             
-            let right_block = Block::default()
-                .borders(Borders::NONE);
+            let finished_timers: Vec<&TimerSession> = app.timers.iter().filter(|t| t.state.is_none()).collect();
             
-            frame.render_widget(right_block, chunks[1]);
+            let mut days_map: std::collections::HashMap<String, u64> = std::collections::HashMap::new();
+            let mut days_order = Vec::new();
+            
+            for t in finished_timers {
+                let date_str = match chrono::DateTime::parse_from_rfc3339(&t.start_time) {
+                    Ok(dt) => dt.format("%m-%d").to_string(), // Short date for bar chart
+                    Err(_) => t.start_time.chars().take(5).collect(),
+                };
+                
+                if !days_map.contains_key(&date_str) {
+                    days_order.push(date_str.clone());
+                    days_map.insert(date_str.clone(), 0);
+                }
+                
+                let duration = t.actual_runtime.unwrap_or(t.duration);
+                let mins = duration / 60;
+                *days_map.get_mut(&date_str).unwrap() += mins;
+            }
+            
+            days_order.reverse();
+            
+            let data: Vec<(&str, u64)> = days_order.iter()
+                .map(|day| {
+                    (day.as_str(), *days_map.get(day).unwrap_or(&0))
+                })
+                .collect();
+
+            let right_block = Block::default()
+                .borders(Borders::NONE)
+                .title(Span::styled(" Minutes per day ", Style::default().fg(Color::Green).add_modifier(ratatui::style::Modifier::BOLD)));
+            
+            if data.is_empty() {
+                let p = Paragraph::new("No data available.")
+                    .alignment(Alignment::Center)
+                    .block(right_block);
+                frame.render_widget(p, chunks[1]);
+            } else {
+                let bar_chart = BarChart::default()
+                    .block(right_block)
+                    .data(&data)
+                    .bar_width(5)
+                    .bar_gap(2)
+                    .bar_style(Style::default().fg(Color::Green))
+                    .value_style(Style::default().fg(Color::White).add_modifier(ratatui::style::Modifier::BOLD))
+                    .label_style(Style::default().fg(Color::White));
+                    
+                frame.render_widget(bar_chart, chunks[1]);
+            }
         },
         _ => unreachable!(),
     }
