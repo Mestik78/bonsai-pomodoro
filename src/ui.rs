@@ -102,6 +102,7 @@ pub fn render(frame: &mut Frame, app: &mut App) {
             let active_timer = app.active_timer();
             let state_str = match active_timer.state {
                 Some(TimerState::New) => "Nuevo",
+                Some(TimerState::Starting(_)) => "Iniciando...",
                 Some(TimerState::Running) => "Corriendo",
                 Some(TimerState::Paused) => "Pausado",
                 None => "Finalizado",
@@ -133,6 +134,7 @@ pub fn render(frame: &mut Frame, app: &mut App) {
             let status_color = match app.mode {
                 AppMode::Normal => match active_timer.state {
                     Some(TimerState::New) => Color::Cyan,
+                    Some(TimerState::Starting(_)) => Color::LightYellow,
                     Some(TimerState::Running) => Color::Green,
                     Some(TimerState::Paused) => Color::Yellow,
                     None => Color::Red,
@@ -142,9 +144,27 @@ pub fn render(frame: &mut Frame, app: &mut App) {
 
             // 1. Draw Bonsai Fullscreen
             let seed = active_timer.seed;
-            let progress = 1.0 - (time_to_show as f32 / active_timer.duration as f32).clamp(0.0, 1.0);
+            let progress = if active_timer.state == Some(TimerState::New) || matches!(active_timer.state, Some(TimerState::Starting(_))) {
+                0.0
+            } else {
+                1.0 - (time_to_show as f32 / active_timer.duration as f32).clamp(0.0, 1.0)
+            };
             
-            let canvas = bonsai::generate_bonsai(seed, progress);
+            let mut canvas = bonsai::generate_bonsai(seed, progress);
+            
+            if let Some(TimerState::Starting(ref start_time_str)) = active_timer.state {
+                if let Ok(start_time) = chrono::DateTime::parse_from_rfc3339(start_time_str) {
+                    let now = chrono::Utc::now();
+                    let elapsed_f = now.signed_duration_since(start_time).num_milliseconds() as f32 / 1000.0;
+                    let animation_progress = (elapsed_f / 0.5).clamp(0.0, 1.0);
+                    let y = -10.0 + (10.0 * animation_progress);
+                    canvas.cells.insert((0, y.round() as i32), bonsai::BonsaiCell {
+                        content: "*".to_string(),
+                        color: Color::Yellow,
+                    });
+                }
+            }
+            
             let bonsai_lines = canvas.render(1.0);
             
             let bonsai_p = Paragraph::new(bonsai_lines.clone())

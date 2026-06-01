@@ -32,9 +32,6 @@ impl BonsaiCanvas {
     // Renders as a list of lines for ratatui
     pub fn render(&self, zoom: f32) -> Vec<ratatui::text::Line<'static>> {
         let mut lines = Vec::new();
-        if self.cells.is_empty() {
-            return lines;
-        }
         
         let min_x = self.cells.keys().map(|k| k.0).min().unwrap_or(0);
         let max_x = self.cells.keys().map(|k| k.0).max().unwrap_or(0);
@@ -64,15 +61,28 @@ impl BonsaiCanvas {
             
             let center_idx = (0 - min_x).max(0) as usize;
             
-            let pot_lines = vec![
+            let has_tree = self.cells.len() > 1;
+            
+            let pot_lines = if !has_tree {
                 vec![
-                    (":", color_text), ("___________", color_leaf), (".", color_wood), ("/", color_wood), 
-                    ("~~~", color_wood), ("\\", color_wood), (".", color_wood), ("___________", color_leaf), (":", color_text)
-                ],
-                vec![(" \\                           / ", color_text)],
-                vec![("  \\_________________________/ ", color_text)],
-                vec![("  (_)                     (_) ", color_text)]
-            ];
+                    vec![
+                        (":", color_text), ("_____________________________", color_leaf), (":", color_text)
+                    ],
+                    vec![(" \\                           / ", color_text)],
+                    vec![("  \\_________________________/  ", color_text)],
+                    vec![("  (_)                     (_)  ", color_text)]
+                ]
+            } else {
+                vec![
+                    vec![
+                        (":", color_text), ("___________", color_leaf), (".", color_wood), ("/", color_wood), 
+                        ("~~~", color_wood), ("\\", color_wood), (".", color_wood), ("___________", color_leaf), (":", color_text)
+                    ],
+                    vec![(" \\                           / ", color_text)],
+                    vec![("  \\_________________________/  ", color_text)],
+                    vec![("  (_)                     (_)  ", color_text)]
+                ]
+            };
             
             for line_parts in pot_lines {
                 let mut spans = Vec::new();
@@ -177,10 +187,12 @@ pub fn generate_bonsai(seed: u64, progress: f32) -> BonsaiCanvas {
     
     // Second pass: generate actual tree
     let mut canvas = BonsaiCanvas::new();
-    let mut rng = StdRng::seed_from_u64(seed);
-    let mut steps = 0;
-    let max_steps = (progress * total_steps as f32).max(1.0) as i32;
-    branch(&mut canvas, &mut rng, 0, 0, BranchType::Trunk, life, multiplier, &mut steps, max_steps);
+    if progress > 0.0 {
+        let mut rng = StdRng::seed_from_u64(seed);
+        let mut steps = 0;
+        let max_steps = (progress * total_steps as f32).max(1.0) as i32;
+        branch(&mut canvas, &mut rng, 0, 0, BranchType::Trunk, life, multiplier, &mut steps, max_steps);
+    }
     
     canvas
 }

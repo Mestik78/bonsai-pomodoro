@@ -19,6 +19,7 @@ pub enum AppMode {
 #[derive(Serialize, Deserialize, Clone, PartialEq)]
 pub enum TimerState {
     New,
+    Starting(String),
     Running,
     Paused,
 }
@@ -160,17 +161,22 @@ impl App {
     pub fn toggle_timer(&mut self) {
         let state = self.active_timer().state.clone();
         match state {
-            Some(TimerState::New) | Some(TimerState::Paused) => {
+            Some(TimerState::New) => {
+                let timer = self.active_timer_mut();
+                timer.state = Some(TimerState::Starting(Utc::now().to_rfc3339()));
+                self.last_tick = Instant::now();
+            },
+            Some(TimerState::Paused) => {
                 let timer = self.active_timer_mut();
                 timer.state = Some(TimerState::Running);
-                if state == Some(TimerState::New) {
-                    timer.start_time = Utc::now().to_rfc3339();
-                }
                 self.last_tick = Instant::now();
             },
             Some(TimerState::Running) => {
                 let timer = self.active_timer_mut();
                 timer.state = Some(TimerState::Paused);
+            },
+            Some(TimerState::Starting(_)) => {
+                // No hacer nada mientras está en la animación
             },
             None => {
                 let duration = self.active_timer().duration;
@@ -263,6 +269,19 @@ impl App {
     }
 
     pub fn on_tick(&mut self) {
+        let state_clone = self.active_timer().state.clone();
+        if let Some(TimerState::Starting(start_time_str)) = state_clone {
+            if let Ok(start_time) = chrono::DateTime::parse_from_rfc3339(&start_time_str) {
+                let now = Utc::now();
+                if now.signed_duration_since(start_time).num_milliseconds() >= 500 {
+                    let timer = self.active_timer_mut();
+                    timer.state = Some(TimerState::Running);
+                    timer.start_time = now.to_rfc3339();
+                    self.last_tick = Instant::now();
+                }
+            }
+        }
+
         let is_running = self.active_timer().state == Some(TimerState::Running);
         if is_running {
             let now = Instant::now();

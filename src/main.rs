@@ -76,8 +76,8 @@ fn main() -> io::Result<()> {
 }
 
 fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, app: &mut App) -> io::Result<()> {
-    // Definimos un tick rate máximo de 250ms para que la UI sea muy responsiva
-    let tick_rate = Duration::from_millis(250);
+    // Definimos un tick rate máximo de 33ms (~30 FPS) para que la animación sea fluida
+    let tick_rate = Duration::from_millis(33);
 
     loop {
         terminal.draw(|f| ui::render(f, app))?;
