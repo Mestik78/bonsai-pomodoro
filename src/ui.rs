@@ -90,7 +90,7 @@ pub fn render(frame: &mut Frame, app: &mut App) {
         } else {
             1.0
         };
-        let bonsai_lines = canvas.render(zoom, None);
+        let bonsai_lines = canvas.render(zoom, None, None);
         
         let bonsai_p = Paragraph::new(bonsai_lines.clone())
             .alignment(Alignment::Center);
@@ -187,7 +187,7 @@ pub fn render(frame: &mut Frame, app: &mut App) {
             } else {
                 1.0
             };
-            let bonsai_lines = canvas.render(zoom, None);
+            let bonsai_lines = canvas.render(zoom, None, None);
             
             let bonsai_p = Paragraph::new(bonsai_lines.clone())
                 .alignment(Alignment::Center);
@@ -198,6 +198,7 @@ pub fn render(frame: &mut Frame, app: &mut App) {
                 .constraints([
                     Constraint::Min(0),
                     Constraint::Length(bonsai_height),
+                    Constraint::Length(1),
                 ])
                 .split(inner_area);
                 
@@ -308,16 +309,18 @@ pub fn render(frame: &mut Frame, app: &mut App) {
                 let mut target_line_idx = 0;
                 let mut current_line = 0;
                 
+                let available_width = if app.bosque_level == crate::app::BosqueLevel::Bonsai {
+                    (inner_area.width * 65 / 100) as usize
+                } else {
+                    inner_area.width as usize
+                };
+
                 for (day_idx, date_str) in days_order.iter().enumerate() {
                     let is_selected = day_idx == selected_idx;
                     let title_style = if is_selected {
-                        if app.bosque_level == crate::app::BosqueLevel::Bonsai {
-                            Style::default().fg(Color::Yellow).add_modifier(ratatui::style::Modifier::BOLD)
-                        } else {
-                            Style::default().fg(Color::Yellow).bg(Color::DarkGray).add_modifier(ratatui::style::Modifier::BOLD)
-                        }
+                        Style::default().fg(Color::Yellow).add_modifier(ratatui::style::Modifier::BOLD)
                     } else {
-                        Style::default().fg(Color::Green).add_modifier(ratatui::style::Modifier::BOLD)
+                        Style::default().fg(Color::DarkGray).add_modifier(ratatui::style::Modifier::BOLD)
                     };
                     
                     if is_selected && app.bosque_level == crate::app::BosqueLevel::Day {
@@ -325,7 +328,14 @@ pub fn render(frame: &mut Frame, app: &mut App) {
                     }
                     
                     // Title item
-                    items.push(ListItem::new(ratatui::text::Line::from(ratatui::text::Span::styled(format!(" {} ", date_str), title_style))));
+                    let mut title_spans = vec![
+                        ratatui::text::Span::styled(format!(" {} ", date_str), title_style),
+                    ];
+                    let header_len = date_str.len() + 2;
+                    let dashes_len = available_width.saturating_sub(header_len);
+                    title_spans.push(ratatui::text::Span::styled("─".repeat(dashes_len), title_style));
+                    
+                    items.push(ListItem::new(ratatui::text::Line::from(title_spans)));
                     current_line += 1;
                     
                     items.push(ListItem::new(ratatui::text::Line::from(""))); // Spacer
@@ -343,23 +353,24 @@ pub fn render(frame: &mut Frame, app: &mut App) {
                         let mins = duration / 60;
                         let secs = duration % 60;
                         
-                        let header1 = format!("{}  {:02}:{:02}", time_str, mins, secs);
-                        
-                        let is_bonsai_selected = is_selected && app.bosque_level == crate::app::BosqueLevel::Bonsai && t_idx == app.bosque_selected_bonsai;
-                        let header_style = if is_bonsai_selected {
-                            Style::default().fg(Color::Yellow).bg(Color::DarkGray).add_modifier(ratatui::style::Modifier::BOLD)
-                        } else {
-                            Style::default().fg(Color::Cyan)
-                        };
+                        let duration_str = format!("{:02}:{:02}", mins, secs);
                         
                         let d = (duration as f64).max(0.0);
                         let x = (d / 3000.0).clamp(0.0, 1.0);
                         let progress = (x * x * (3.0 - 2.0 * x)) as f32;
                         let mini_canvas = bonsai::generate_bonsai(t.seed, progress);
-                        let mini_lines = mini_canvas.render(0.5, None);
+                        let is_bonsai_selected = is_selected && app.bosque_level == crate::app::BosqueLevel::Bonsai && t_idx == app.bosque_selected_bonsai;
+                        let pot_color = if is_bonsai_selected { Some(Color::Yellow) } else { None };
+                        let mini_lines = mini_canvas.render(0.5, Some(duration_str), pot_color);
                         
                         let mut block_lines = Vec::new();
-                        block_lines.push(ratatui::text::Line::from(ratatui::text::Span::styled(header1, header_style)));
+                        
+                        let target_tree_height = 13_usize;
+                        let pad_count = target_tree_height.saturating_sub(mini_lines.len());
+                        for _ in 0..pad_count {
+                            block_lines.push(ratatui::text::Line::from(""));
+                        }
+                        
                         for line in mini_lines {
                             block_lines.push(line);
                         }
@@ -368,11 +379,6 @@ pub fn render(frame: &mut Frame, app: &mut App) {
                     
                     let block_width = 25;
                     let max_height = timer_blocks.iter().map(|b| b.len()).max().unwrap_or(0);
-                    let available_width = if app.bosque_level == crate::app::BosqueLevel::Bonsai {
-                        (inner_area.width * 65 / 100) as usize
-                    } else {
-                        inner_area.width as usize
-                    };
                     let cols = (available_width / block_width).max(1);
                     
                     if is_selected {
@@ -389,14 +395,18 @@ pub fn render(frame: &mut Frame, app: &mut App) {
                         
                         for i in 0..max_height {
                             let mut combined_spans = Vec::new();
-                            for block in row_chunk {
+                            for (block_idx, block) in row_chunk.iter().enumerate() {
                                 if i < block.len() {
                                     let line_len: usize = block[i].spans.iter().map(|s| s.content.chars().count()).sum();
-                                    combined_spans.extend(block[i].spans.clone());
+                                    for mut span in block[i].spans.clone() {
+                                        combined_spans.push(span);
+                                    }
                                     let padding = block_width.saturating_sub(line_len);
-                                    combined_spans.push(ratatui::text::Span::raw(" ".repeat(padding)));
+                                    let pad_span = ratatui::text::Span::raw(" ".repeat(padding));
+                                    combined_spans.push(pad_span);
                                 } else {
-                                    combined_spans.push(ratatui::text::Span::raw(" ".repeat(block_width)));
+                                    let pad_span = ratatui::text::Span::raw(" ".repeat(block_width));
+                                    combined_spans.push(pad_span);
                                 }
                             }
                             items.push(ListItem::new(ratatui::text::Line::from(combined_spans)));
@@ -434,7 +444,7 @@ pub fn render(frame: &mut Frame, app: &mut App) {
                                 let selected_bonsai = timers_for_day[app.bosque_selected_bonsai];
                                 
                                 let title = selected_bonsai.title.as_deref().unwrap_or("Sin título");
-                                let desc = selected_bonsai.description.as_deref().unwrap_or("Sin descripción");
+                                let desc = selected_bonsai.description.as_deref().unwrap_or("");
                                 
                                 let start_dt = chrono::DateTime::parse_from_rfc3339(&selected_bonsai.start_time).ok();
                                 let date_str = start_dt.map(|dt| dt.format("%Y-%m-%d").to_string()).unwrap_or_default();
@@ -457,18 +467,22 @@ pub fn render(frame: &mut Frame, app: &mut App) {
                                 } else {
                                     1.0
                                 };
-                                let bonsai_lines = canvas.render(zoom, Some(duration_str.clone()));
+                                let bonsai_lines = canvas.render(zoom, Some(duration_str.clone()), None);
                                 
                                 let bonsai_height = bonsai_lines.len() as u16;
                                 let bottom_height = bonsai_height + 4;
                                 
-                                let details_text = vec![
+                                let mut details_text = vec![
                                     ratatui::text::Line::from(ratatui::text::Span::styled(title, Style::default().fg(Color::Yellow).add_modifier(ratatui::style::Modifier::BOLD))),
-                                    ratatui::text::Line::from(""),
-                                    ratatui::text::Line::from(desc),
-                                    ratatui::text::Line::from(""),
-                                    ratatui::text::Line::from(ratatui::text::Span::styled(format!("{} {}", date_str, time_str), Style::default().fg(Color::DarkGray))),
                                 ];
+                                
+                                if !desc.is_empty() {
+                                    details_text.push(ratatui::text::Line::from(""));
+                                    details_text.push(ratatui::text::Line::from(desc));
+                                }
+                                
+                                details_text.push(ratatui::text::Line::from(""));
+                                details_text.push(ratatui::text::Line::from(ratatui::text::Span::styled(format!("{} {}", date_str, time_str), Style::default().fg(Color::DarkGray))));
                                 
                                 let top_p = Paragraph::new(details_text)
                                     .alignment(Alignment::Center)
