@@ -85,6 +85,17 @@ impl App {
         }
     }
 
+    pub fn add_seconds(&mut self, seconds: i64) {
+        let new_time = (self.time_left as i64) + seconds;
+        
+        if new_time <= 0 {
+            self.time_left = 0;
+            self.is_running = false;
+        } else {
+            self.time_left = new_time as u64;
+        }
+    }
+
     pub fn on_tick(&mut self) {
         if self.is_running {
             let now = Instant::now();

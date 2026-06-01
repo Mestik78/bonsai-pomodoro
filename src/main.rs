@@ -3,7 +3,7 @@ mod ui;
 
 use std::{io, time::Duration};
 use crossterm::{
-    event::{self, Event, KeyCode, KeyEventKind},
+    event::{self, Event, KeyCode, KeyEventKind, KeyModifiers},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -59,12 +59,20 @@ fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, app: &mut App)
                         KeyCode::Char(' ') => app.toggle_timer(),
                         KeyCode::Up => {
                             if app.current_tab == 0 {
-                                app.add_minutes(1);
+                                if key.modifiers.contains(KeyModifiers::CONTROL) {
+                                    app.add_seconds(1);
+                                } else {
+                                    app.add_minutes(1);
+                                }
                             }
                         },
                         KeyCode::Down => {
                             if app.current_tab == 0 {
-                                app.add_minutes(-1);
+                                if key.modifiers.contains(KeyModifiers::CONTROL) {
+                                    app.add_seconds(-1);
+                                } else {
+                                    app.add_minutes(-1);
+                                }
                             }
                         },
                         _ => {}
