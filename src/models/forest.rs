@@ -1,5 +1,6 @@
 use ratatui::widgets::ListState;
 use crate::models::timer::TimerSession;
+use crate::models::tabs::{TabEvent, EventResult};
 
 #[derive(PartialEq)]
 pub enum ForestLevel {
@@ -33,6 +34,51 @@ impl ForestState {
             cols: 1,
             last_nav_dir: NavDir::Down,
             cached_days: Vec::new(),
+        }
+    }
+
+    pub fn handle_event(&mut self, event: &TabEvent, timers: &[TimerSession]) -> EventResult {
+        match event {
+            TabEvent::Up { .. } => {
+                if self.level == ForestLevel::Bonsai {
+                    self.nav_up(timers);
+                } else {
+                    self.previous();
+                }
+                EventResult::Consumed
+            },
+            TabEvent::Down { .. } => {
+                if self.level == ForestLevel::Bonsai {
+                    self.nav_down(timers);
+                } else {
+                    self.next();
+                }
+                EventResult::Consumed
+            },
+            TabEvent::Left => {
+                if self.level == ForestLevel::Bonsai {
+                    self.nav_left(timers);
+                    EventResult::Consumed
+                } else {
+                    EventResult::Ignored
+                }
+            },
+            TabEvent::Right => {
+                if self.level == ForestLevel::Bonsai {
+                    self.nav_right(timers);
+                    EventResult::Consumed
+                } else {
+                    EventResult::Ignored
+                }
+            },
+            TabEvent::Enter => {
+                self.enter();
+                EventResult::Consumed
+            },
+            TabEvent::Esc => {
+                self.escape();
+                EventResult::Consumed
+            }
         }
     }
 

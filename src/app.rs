@@ -75,10 +75,12 @@ impl App {
     }
 
     pub fn save_state(&self) {
-        let state = AppState {
-            timers: self.timers.clone(),
-        };
-        state.save(self.is_production);
+        let timers = self.timers.clone();
+        let is_production = self.is_production;
+        std::thread::spawn(move || {
+            let state = AppState { timers };
+            state.save(is_production);
+        });
     }
 
     pub fn active_timer(&self) -> &TimerSession {
@@ -204,113 +206,45 @@ impl App {
     }
 
 
-    pub fn forest_enter(&mut self) {
-        self.forest.enter();
-    }
+    // Dead code removed
 
-    pub fn forest_escape(&mut self) {
-        self.forest.escape();
-    }
-
-    pub fn forest_nav_left(&mut self) {
-        self.forest.nav_left(&self.timers);
-    }
-
-    pub fn forest_nav_right(&mut self) {
-        self.forest.nav_right(&self.timers);
-    }
-
-    pub fn forest_nav_up(&mut self) {
-        self.forest.nav_up(&self.timers);
-    }
-
-    pub fn forest_nav_down(&mut self) {
-        self.forest.nav_down(&self.timers);
-    }
-
-    pub fn stats_next(&mut self) {
-        self.stats.next();
-    }
-
-    pub fn stats_previous(&mut self) {
-        self.stats.previous();
-    }
-
-    pub fn handle_up(&mut self, is_ctrl: bool) {
-        match self.current_tab {
-            Tab::Timer => {
-                if is_ctrl {
+    pub fn handle_timer_event(&mut self, event: &crate::models::tabs::TabEvent) -> crate::models::tabs::EventResult {
+        use crate::models::tabs::{TabEvent, EventResult};
+        match event {
+            TabEvent::Up { is_ctrl } => {
+                if *is_ctrl {
                     self.add_seconds(1);
                 } else {
                     self.add_minutes(1);
                 }
+                EventResult::Consumed
             },
-            Tab::Forest => {
-                if self.forest.level == crate::models::forest::ForestLevel::Bonsai {
-                    self.forest_nav_up();
-                } else {
-                    self.forest.previous();
-                }
-            },
-            Tab::Stats => self.stats_previous(),
-        }
-    }
-
-    pub fn handle_down(&mut self, is_ctrl: bool) {
-        match self.current_tab {
-            Tab::Timer => {
-                if is_ctrl {
+            TabEvent::Down { is_ctrl } => {
+                if *is_ctrl {
                     self.add_seconds(-1);
                 } else {
                     self.add_minutes(-1);
                 }
+                EventResult::Consumed
             },
-            Tab::Forest => {
-                if self.forest.level == crate::models::forest::ForestLevel::Bonsai {
-                    self.forest_nav_down();
-                } else {
-                    self.forest.next();
-                }
-            },
-            Tab::Stats => self.stats_next(),
+            _ => EventResult::Ignored
         }
     }
 
-    pub fn handle_left(&mut self) {
-        match self.current_tab {
-            Tab::Forest => {
-                if self.forest.level == crate::models::forest::ForestLevel::Bonsai {
-                    self.forest_nav_left();
-                } else {
-                    self.previous_tab();
-                }
-            },
-            _ => self.previous_tab(),
-        }
-    }
+    pub fn dispatch_event(&mut self, event: crate::models::tabs::TabEvent) {
+        use crate::models::tabs::{Tab, EventResult};
+        let result = match self.current_tab {
+            Tab::Timer => self.handle_timer_event(&event),
+            Tab::Forest => self.forest.handle_event(&event, &self.timers),
+            Tab::Stats => self.stats.handle_event(&event),
+        };
 
-    pub fn handle_right(&mut self) {
-        match self.current_tab {
-            Tab::Forest => {
-                if self.forest.level == crate::models::forest::ForestLevel::Bonsai {
-                    self.forest_nav_right();
-                } else {
-                    self.next_tab();
-                }
-            },
-            _ => self.next_tab(),
-        }
-    }
-
-    pub fn handle_enter(&mut self) {
-        if self.current_tab == Tab::Forest {
-            self.forest_enter();
-        }
-    }
-
-    pub fn handle_esc(&mut self) {
-        if self.current_tab == Tab::Forest {
-            self.forest_escape();
+        if let EventResult::Ignored = result {
+            match event {
+                crate::models::tabs::TabEvent::Left => self.previous_tab(),
+                crate::models::tabs::TabEvent::Right => self.next_tab(),
+                _ => {}
+            }
         }
     }
 }

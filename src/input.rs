@@ -1,7 +1,6 @@
 use std::{io, time::Duration};
 use crossterm::event::{self, Event, KeyCode, KeyEventKind, KeyModifiers};
 use crate::app::{App, AppMode};
-use crate::models::forest::ForestLevel;
 
 pub fn handle_event(app: &mut App, tick_rate: Duration) -> io::Result<bool> {
     if event::poll(tick_rate)? {
@@ -11,8 +10,8 @@ pub fn handle_event(app: &mut App, tick_rate: Duration) -> io::Result<bool> {
                     AppMode::Normal => {
                         match key.code {
                             KeyCode::Char('q') => app.quit(),
-                            KeyCode::Left => app.handle_left(),
-                            KeyCode::Right => app.handle_right(),
+                            KeyCode::Left => app.dispatch_event(crate::models::tabs::TabEvent::Left),
+                            KeyCode::Right => app.dispatch_event(crate::models::tabs::TabEvent::Right),
                             KeyCode::Tab => app.next_tab(),
                             KeyCode::Char(' ') => app.toggle_timer(),
                             KeyCode::Char('r') => {
@@ -25,10 +24,10 @@ pub fn handle_event(app: &mut App, tick_rate: Duration) -> io::Result<bool> {
                                     app.finish_early();
                                 }
                             },
-                            KeyCode::Up => app.handle_up(key.modifiers.contains(KeyModifiers::CONTROL)),
-                            KeyCode::Down => app.handle_down(key.modifiers.contains(KeyModifiers::CONTROL)),
-                            KeyCode::Enter => app.handle_enter(),
-                            KeyCode::Esc => app.handle_esc(),
+                            KeyCode::Up => app.dispatch_event(crate::models::tabs::TabEvent::Up { is_ctrl: key.modifiers.contains(KeyModifiers::CONTROL) }),
+                            KeyCode::Down => app.dispatch_event(crate::models::tabs::TabEvent::Down { is_ctrl: key.modifiers.contains(KeyModifiers::CONTROL) }),
+                            KeyCode::Enter => app.dispatch_event(crate::models::tabs::TabEvent::Enter),
+                            KeyCode::Esc => app.dispatch_event(crate::models::tabs::TabEvent::Esc),
                             _ => {}
                         }
                     },

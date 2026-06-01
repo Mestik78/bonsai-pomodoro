@@ -1,4 +1,5 @@
 use ratatui::widgets::ListState;
+use crate::models::tabs::{TabEvent, EventResult};
 
 pub struct StatsState {
     pub list_state: ListState,
@@ -9,6 +10,20 @@ impl StatsState {
         let mut list_state = ListState::default();
         list_state.select(Some(0));
         Self { list_state }
+    }
+
+    pub fn handle_event(&mut self, event: &TabEvent) -> EventResult {
+        match event {
+            TabEvent::Up { .. } => {
+                self.previous();
+                EventResult::Consumed
+            },
+            TabEvent::Down { .. } => {
+                self.next();
+                EventResult::Consumed
+            },
+            _ => EventResult::Ignored
+        }
     }
 
     pub fn selected(&self) -> Option<usize> {

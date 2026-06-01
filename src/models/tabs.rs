@@ -22,3 +22,17 @@ impl Tab {
         }
     }
 }
+
+pub enum TabEvent {
+    Up { is_ctrl: bool },
+    Down { is_ctrl: bool },
+    Left,
+    Right,
+    Enter,
+    Esc,
+}
+
+pub enum EventResult {
+    Consumed,
+    Ignored,
+}
