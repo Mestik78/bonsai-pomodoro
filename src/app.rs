@@ -357,13 +357,27 @@ impl App {
             return;
         };
 
-        let timer = self.active_timer_mut();
-        if !t.is_empty() {
-            timer.title = Some(t);
+        {
+            let timer = self.active_timer_mut();
+            if !t.is_empty() {
+                timer.title = Some(t);
+            }
+            if !d.is_empty() {
+                timer.description = Some(d);
+            }
         }
-        if !d.is_empty() {
-            timer.description = Some(d);
-        }
+        
+        let new_duration = self.timers[0].duration;
+        self.timers.insert(0, TimerSession {
+            start_time: chrono::Utc::now().to_rfc3339(),
+            duration: new_duration,
+            state: Some(TimerState::New),
+            time_left: Some(new_duration),
+            actual_runtime: None,
+            title: None,
+            description: None,
+            seed: rand::random(),
+        });
         
         self.save_state();
         self.mode = AppMode::Normal;

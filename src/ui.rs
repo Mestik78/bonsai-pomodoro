@@ -41,6 +41,11 @@ pub fn render(frame: &mut Frame, app: &mut App) {
     let inner_area = inner_block.inner(chunks[1]);
 
     if let AppMode::PostTimerInput { title, description, focus } = &app.mode {
+        let horiz_chunks = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+            .split(inner_area);
+            
         let input_chunks = Layout::default()
             .direction(Direction::Vertical)
             .margin(2)
@@ -50,7 +55,7 @@ pub fn render(frame: &mut Frame, app: &mut App) {
                 Constraint::Length(6), // Description
                 Constraint::Min(0),
             ])
-            .split(inner_area);
+            .split(horiz_chunks[0]);
         
         let help_p = Paragraph::new("¡Pomodoro finalizado! Presiona Tab para cambiar de campo, Enter para guardar.")
             .alignment(Alignment::Center)
@@ -58,43 +63,43 @@ pub fn render(frame: &mut Frame, app: &mut App) {
         frame.render_widget(help_p, input_chunks[0]);
 
         let title_style = if *focus == 0 { Style::default().fg(Color::Yellow) } else { Style::default().fg(Color::DarkGray) };
-        let title_cursor = if *focus == 0 { "_" } else { "" };
-        let title_p = Paragraph::new(format!("{}{}", title, title_cursor))
+        let title_p = Paragraph::new(title.as_str())
             .block(Block::default().borders(Borders::ALL).title(" Título "))
             .style(title_style);
         frame.render_widget(title_p, input_chunks[1]);
 
         let desc_style = if *focus == 1 { Style::default().fg(Color::Yellow) } else { Style::default().fg(Color::DarkGray) };
-        let desc_cursor = if *focus == 1 { "_" } else { "" };
-        let desc_p = Paragraph::new(format!("{}{}", description, desc_cursor))
+        let desc_p = Paragraph::new(description.as_str())
             .block(Block::default().borders(Borders::ALL).title(" Descripción "))
             .style(desc_style)
             .wrap(ratatui::widgets::Wrap { trim: false });
         frame.render_widget(desc_p, input_chunks[2]);
+        
+        // Draw Bonsai in right half
+        let active_timer = app.active_timer();
+        let seed = active_timer.seed;
+        let canvas = bonsai::generate_bonsai(seed, 1.0);
+        let bonsai_lines = canvas.render(1.0);
+        
+        let bonsai_p = Paragraph::new(bonsai_lines.clone())
+            .alignment(Alignment::Center);
+            
+        let bonsai_height = bonsai_lines.len() as u16;
+        let bonsai_vert_chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Min(0),
+                Constraint::Length(bonsai_height),
+            ])
+            .split(horiz_chunks[1]);
+            
+        frame.render_widget(bonsai_p, bonsai_vert_chunks[1]);
 
         return;
     }
 
     match app.current_tab {
         0 => {
-            // Split main area horizontally: left for timer, right for bonsai
-            let horiz_chunks = Layout::default()
-                .direction(Direction::Horizontal)
-                .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
-                .split(inner_area);
-                
-            let vert_chunks = Layout::default()
-                .direction(Direction::Vertical)
-                .constraints([
-                    Constraint::Min(0),
-                    Constraint::Length(8), // Timer
-                    Constraint::Length(1), // Spacer
-                    Constraint::Length(1), // Status
-                    Constraint::Min(0),
-                    Constraint::Length(1), // Help
-                ])
-                .split(horiz_chunks[0]);
-
             let active_timer = app.active_timer();
             let state_str = match active_timer.state {
                 Some(TimerState::New) => "Nuevo",
@@ -122,53 +127,82 @@ pub fn render(frame: &mut Frame, app: &mut App) {
                 .lines(vec![time_str.into()])
                 .build();
 
-            frame.render_widget(big_text, vert_chunks[1]);
-
             let status_text = match app.mode {
                 AppMode::Normal => state_str,
                 _ => "Introduciendo datos...",
             };
             let status_color = match app.mode {
-                AppMode::Normal => Color::White,
+                AppMode::Normal => match active_timer.state {
+                    Some(TimerState::New) => Color::Cyan,
+                    Some(TimerState::Running) => Color::Green,
+                    Some(TimerState::Paused) => Color::Yellow,
+                    None => Color::Red,
+                },
                 _ => Color::Yellow,
             };
-            let status_p = Paragraph::new(Span::styled(status_text, Style::default().fg(status_color).add_modifier(ratatui::style::Modifier::BOLD)))
-                .alignment(Alignment::Center);
-            frame.render_widget(status_p, vert_chunks[3]);
 
-            let help_text = "Espacio: Pausar/Reanudar  |  Arr/Aba: Ajustar Minuto  |  Izq/Der: Cambiar Pestaña";
-            let help_p = Paragraph::new(Span::styled(help_text, Style::default().fg(Color::DarkGray)))
-                .alignment(Alignment::Center);
-            frame.render_widget(help_p, vert_chunks[5]);
-            
-            // Draw Bonsai in right chunk
+            // 1. Draw Bonsai Fullscreen
             let seed = active_timer.seed;
-            // The active tree grows based on time spent. 
-            // If duration is 25 min, max life is 32. 
-            // So life = (1.0 - time_left / duration) * 32
-            // Wait, just grow it fully if we want. Let's make it grow over time!
             let progress = 1.0 - (time_to_show as f32 / active_timer.duration as f32).clamp(0.0, 1.0);
-            let life = (progress * 32.0) as i32;
-            let life = life.max(4); // minimum life
             
-            let canvas = bonsai::generate_bonsai(seed, life, 5);
+            let canvas = bonsai::generate_bonsai(seed, progress);
             let bonsai_lines = canvas.render(1.0);
             
             let bonsai_p = Paragraph::new(bonsai_lines.clone())
-                .alignment(Alignment::Center)
-                .block(Block::default().borders(Borders::ALL).title(" Tu Bonsái "));
+                .alignment(Alignment::Center);
                 
-            let right_height = horiz_chunks[1].height;
-            let bonsai_height = (bonsai_lines.len() as u16 + 2).min(right_height);
-            let right_vert_chunks = Layout::default()
+            let bonsai_height = bonsai_lines.len() as u16;
+            let bonsai_vert_chunks = Layout::default()
                 .direction(Direction::Vertical)
                 .constraints([
                     Constraint::Min(0),
                     Constraint::Length(bonsai_height),
                 ])
-                .split(horiz_chunks[1]);
+                .split(inner_area);
                 
-            frame.render_widget(bonsai_p, right_vert_chunks[1]);
+            frame.render_widget(bonsai_p, bonsai_vert_chunks[1]);
+            
+            // 2. Overlay Timer Widget
+            let timer_width = 45; // 39 text + 2 borders + 4 padding
+            let timer_height = 11; // 8 text + 2 borders + 1 top padding
+            let offset_x = 2;
+            let offset_y = 1;
+            
+            let timer_area = ratatui::layout::Rect {
+                x: inner_area.x + offset_x,
+                y: inner_area.y + offset_y,
+                width: timer_width.min(inner_area.width.saturating_sub(offset_x)),
+                height: timer_height.min(inner_area.height.saturating_sub(offset_y)),
+            };
+            
+            let timer_block = Block::default()
+                .borders(Borders::ALL)
+                .title(Span::styled(format!(" {} ", status_text), Style::default().fg(status_color).add_modifier(ratatui::style::Modifier::BOLD)));
+                
+            frame.render_widget(ratatui::widgets::Clear, timer_area);
+            frame.render_widget(timer_block, timer_area);
+            
+            let inner_timer_area = ratatui::layout::Rect {
+                x: timer_area.x + 3,
+                y: timer_area.y + 2, // 1 for border + 1 for padding top
+                width: timer_area.width.saturating_sub(6),
+                height: 8, // exact BigText height
+            };
+            frame.render_widget(big_text, inner_timer_area);
+            
+            // 3. Overlay Help Text
+            let help_text = "Espacio: Pausar/Reanudar  |  Arr/Aba: Ajustar Minuto  |  Izq/Der: Cambiar Pestaña";
+            let help_p = Paragraph::new(Span::styled(help_text, Style::default().fg(Color::DarkGray)))
+                .alignment(Alignment::Center);
+                
+            let help_area = ratatui::layout::Rect {
+                x: inner_area.x,
+                y: inner_area.y + inner_area.height.saturating_sub(1),
+                width: inner_area.width,
+                height: 1,
+            };
+            frame.render_widget(ratatui::widgets::Clear, help_area);
+            frame.render_widget(help_p, help_area);
         },
         1 => {
             let finished_timers: Vec<&TimerSession> = app.timers.iter().filter(|t| t.state.is_none()).collect();
@@ -203,8 +237,7 @@ pub fn render(frame: &mut Frame, app: &mut App) {
                         text_lines.push(ratatui::text::Line::from(desc.as_str()));
                     }
                     
-                    // Render mini bonsai
-                    let mini_canvas = bonsai::generate_bonsai(t.seed, 32, 5);
+                    let mini_canvas = bonsai::generate_bonsai(t.seed, 1.0);
                     let mini_lines = mini_canvas.render(0.5);
                     for line in mini_lines {
                         text_lines.push(line);

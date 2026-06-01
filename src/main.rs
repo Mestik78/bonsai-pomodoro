@@ -27,7 +27,7 @@ fn main() -> io::Result<()> {
             .and_then(|s| s.parse::<f32>().ok())
             .unwrap_or(1.0);
             
-        let canvas = bonsai::generate_bonsai(seed, 32, 5);
+        let canvas = bonsai::generate_bonsai(seed, 1.0);
         let lines = canvas.render(zoom);
         for line in lines {
             for span in line.spans {
