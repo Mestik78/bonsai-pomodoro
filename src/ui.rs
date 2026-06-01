@@ -302,7 +302,7 @@ pub fn render(frame: &mut Frame, app: &mut App) {
                     days_map.get_mut(&date_str).unwrap().push(t);
                 }
                 
-                let selected_idx = app.bosque_state.selected().unwrap_or(0);
+                let selected_idx = app.bosque_selected_day;
                 
                 let mut items = Vec::new();
                 let mut target_line_idx = 0;
@@ -310,15 +310,19 @@ pub fn render(frame: &mut Frame, app: &mut App) {
                 
                 for (day_idx, date_str) in days_order.into_iter().enumerate() {
                     let is_selected = day_idx == selected_idx;
-                    if is_selected {
-                        target_line_idx = current_line;
-                    }
-                    
                     let title_style = if is_selected {
-                        Style::default().fg(Color::Yellow).bg(Color::DarkGray).add_modifier(ratatui::style::Modifier::BOLD)
+                        if app.bosque_level == crate::app::BosqueLevel::Bonsai {
+                            Style::default().fg(Color::Yellow).add_modifier(ratatui::style::Modifier::BOLD)
+                        } else {
+                            Style::default().fg(Color::Yellow).bg(Color::DarkGray).add_modifier(ratatui::style::Modifier::BOLD)
+                        }
                     } else {
                         Style::default().fg(Color::Green).add_modifier(ratatui::style::Modifier::BOLD)
                     };
+                    
+                    if is_selected && app.bosque_level == crate::app::BosqueLevel::Day {
+                        target_line_idx = current_line;
+                    }
                     
                     // Title item
                     items.push(ListItem::new(ratatui::text::Line::from(ratatui::text::Span::styled(format!(" {} ", date_str), title_style))));
@@ -330,7 +334,7 @@ pub fn render(frame: &mut Frame, app: &mut App) {
                     let timers_for_day = days_map.get(&date_str).unwrap();
                     
                     let mut timer_blocks: Vec<Vec<ratatui::text::Line>> = Vec::new();
-                    for t in timers_for_day {
+                    for (t_idx, t) in timers_for_day.iter().enumerate() {
                         let time_str = match chrono::DateTime::parse_from_rfc3339(&t.start_time) {
                             Ok(dt) => dt.format("%H:%M").to_string(),
                             Err(_) => "".to_string(),
@@ -341,6 +345,13 @@ pub fn render(frame: &mut Frame, app: &mut App) {
                         
                         let header1 = format!("{}  {:02}:{:02}", time_str, mins, secs);
                         
+                        let is_bonsai_selected = is_selected && app.bosque_level == crate::app::BosqueLevel::Bonsai && t_idx == app.bosque_selected_bonsai;
+                        let header_style = if is_bonsai_selected {
+                            Style::default().fg(Color::Yellow).bg(Color::DarkGray).add_modifier(ratatui::style::Modifier::BOLD)
+                        } else {
+                            Style::default().fg(Color::Cyan)
+                        };
+                        
                         let d = (duration as f64).max(0.0);
                         let x = (d / 3000.0).clamp(0.0, 1.0);
                         let progress = (x * x * (3.0 - 2.0 * x)) as f32;
@@ -348,7 +359,7 @@ pub fn render(frame: &mut Frame, app: &mut App) {
                         let mini_lines = mini_canvas.render(0.25);
                         
                         let mut block_lines = Vec::new();
-                        block_lines.push(ratatui::text::Line::from(ratatui::text::Span::styled(header1, Style::default().fg(Color::Cyan))));
+                        block_lines.push(ratatui::text::Line::from(ratatui::text::Span::styled(header1, header_style)));
                         for line in mini_lines {
                             block_lines.push(line);
                         }
@@ -360,7 +371,18 @@ pub fn render(frame: &mut Frame, app: &mut App) {
                     let available_width = inner_area.width as usize;
                     let cols = (available_width / block_width).max(1);
                     
-                    for row_chunk in timer_blocks.chunks(cols) {
+                    if is_selected {
+                        app.bosque_cols = cols;
+                    }
+                    
+                    for (row_idx, row_chunk) in timer_blocks.chunks(cols).enumerate() {
+                        if is_selected && app.bosque_level == crate::app::BosqueLevel::Bonsai {
+                            let selected_row = app.bosque_selected_bonsai / cols;
+                            if row_idx == selected_row {
+                                target_line_idx = current_line;
+                            }
+                        }
+                        
                         for i in 0..max_height {
                             let mut combined_spans = Vec::new();
                             for block in row_chunk {

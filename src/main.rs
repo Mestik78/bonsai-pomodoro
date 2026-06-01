@@ -91,8 +91,21 @@ fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, app: &mut App)
                         AppMode::Normal => {
                             match key.code {
                                 KeyCode::Char('q') => app.quit(),
-                                KeyCode::Left => app.previous_tab(),
-                                KeyCode::Right | KeyCode::Tab => app.next_tab(),
+                                KeyCode::Left => {
+                                    if app.current_tab == 1 && app.bosque_level == crate::app::BosqueLevel::Bonsai {
+                                        app.bosque_nav_left();
+                                    } else {
+                                        app.previous_tab();
+                                    }
+                                },
+                                KeyCode::Right => {
+                                    if app.current_tab == 1 && app.bosque_level == crate::app::BosqueLevel::Bonsai {
+                                        app.bosque_nav_right();
+                                    } else {
+                                        app.next_tab();
+                                    }
+                                },
+                                KeyCode::Tab => app.next_tab(),
                                 KeyCode::Char(' ') => app.toggle_timer(),
                                 KeyCode::Char('r') => {
                                     if app.current_tab == 0 {
@@ -112,7 +125,11 @@ fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, app: &mut App)
                                             app.add_minutes(1);
                                         }
                                     } else if app.current_tab == 1 {
-                                        app.bosque_previous();
+                                        if app.bosque_level == crate::app::BosqueLevel::Bonsai {
+                                            app.bosque_nav_up();
+                                        } else {
+                                            app.bosque_previous();
+                                        }
                                     }
                                 },
                                 KeyCode::Down => {
@@ -123,7 +140,21 @@ fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, app: &mut App)
                                             app.add_minutes(-1);
                                         }
                                     } else if app.current_tab == 1 {
-                                        app.bosque_next();
+                                        if app.bosque_level == crate::app::BosqueLevel::Bonsai {
+                                            app.bosque_nav_down();
+                                        } else {
+                                            app.bosque_next();
+                                        }
+                                    }
+                                },
+                                KeyCode::Enter => {
+                                    if app.current_tab == 1 {
+                                        app.bosque_enter();
+                                    }
+                                },
+                                KeyCode::Esc => {
+                                    if app.current_tab == 1 {
+                                        app.bosque_escape();
                                     }
                                 },
                                 _ => {}
