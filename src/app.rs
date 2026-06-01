@@ -2,6 +2,7 @@ use std::time::Instant;
 
 use crate::models::forest::ForestState;
 use crate::models::stats::StatsState;
+use crate::models::tabs::Tab;
 
 #[derive(PartialEq)]
 pub enum AppMode {
@@ -17,7 +18,7 @@ use crate::models::timer::{TimerSession, TimerState};
 use crate::models::app_state::AppState;
 
 pub struct App {
-    pub current_tab: usize,
+    pub current_tab: Tab,
     pub should_quit: bool,
     pub tab_titles: Vec<&'static str>,
     pub timers: Vec<TimerSession>,
@@ -52,6 +53,7 @@ impl App {
 
         let finished_count = timers.iter().filter(|t| t.state.is_none()).count();
         let mut forest = ForestState::new();
+        forest.update_cache(&timers);
         if finished_count > 0 {
             forest.list_state.select(Some(0));
             forest.selected_day = 0;
@@ -60,7 +62,7 @@ impl App {
         let stats = StatsState::new();
 
         Self {
-            current_tab: 0,
+            current_tab: Tab::Timer,
             should_quit: false,
             tab_titles: vec!["Timer", "Forest", "Stats"],
             timers,
@@ -116,6 +118,7 @@ impl App {
                 focus: 0,
             };
             self.save_state();
+            self.forest.update_cache(&self.timers);
         }
     }
 
@@ -127,19 +130,16 @@ impl App {
                 focus: 0,
             };
             self.save_state();
+            self.forest.update_cache(&self.timers);
         }
     }
 
     pub fn next_tab(&mut self) {
-        self.current_tab = (self.current_tab + 1) % self.tab_titles.len();
+        self.current_tab = self.current_tab.next();
     }
 
     pub fn previous_tab(&mut self) {
-        if self.current_tab == 0 {
-            self.current_tab = self.tab_titles.len() - 1;
-        } else {
-            self.current_tab -= 1;
-        }
+        self.current_tab = self.current_tab.previous();
     }
 
     pub fn quit(&mut self) {
@@ -203,16 +203,9 @@ impl App {
         self.mode = AppMode::Normal;
     }
 
-    pub fn forest_next(&mut self) {
-        self.forest.next(&self.timers);
-    }
-
-    pub fn forest_previous(&mut self) {
-        self.forest.previous(&self.timers);
-    }
 
     pub fn forest_enter(&mut self) {
-        self.forest.enter(&self.timers);
+        self.forest.enter();
     }
 
     pub fn forest_escape(&mut self) {
@@ -241,5 +234,83 @@ impl App {
 
     pub fn stats_previous(&mut self) {
         self.stats.previous();
+    }
+
+    pub fn handle_up(&mut self, is_ctrl: bool) {
+        match self.current_tab {
+            Tab::Timer => {
+                if is_ctrl {
+                    self.add_seconds(1);
+                } else {
+                    self.add_minutes(1);
+                }
+            },
+            Tab::Forest => {
+                if self.forest.level == crate::models::forest::ForestLevel::Bonsai {
+                    self.forest_nav_up();
+                } else {
+                    self.forest.previous();
+                }
+            },
+            Tab::Stats => self.stats_previous(),
+        }
+    }
+
+    pub fn handle_down(&mut self, is_ctrl: bool) {
+        match self.current_tab {
+            Tab::Timer => {
+                if is_ctrl {
+                    self.add_seconds(-1);
+                } else {
+                    self.add_minutes(-1);
+                }
+            },
+            Tab::Forest => {
+                if self.forest.level == crate::models::forest::ForestLevel::Bonsai {
+                    self.forest_nav_down();
+                } else {
+                    self.forest.next();
+                }
+            },
+            Tab::Stats => self.stats_next(),
+        }
+    }
+
+    pub fn handle_left(&mut self) {
+        match self.current_tab {
+            Tab::Forest => {
+                if self.forest.level == crate::models::forest::ForestLevel::Bonsai {
+                    self.forest_nav_left();
+                } else {
+                    self.previous_tab();
+                }
+            },
+            _ => self.previous_tab(),
+        }
+    }
+
+    pub fn handle_right(&mut self) {
+        match self.current_tab {
+            Tab::Forest => {
+                if self.forest.level == crate::models::forest::ForestLevel::Bonsai {
+                    self.forest_nav_right();
+                } else {
+                    self.next_tab();
+                }
+            },
+            _ => self.next_tab(),
+        }
+    }
+
+    pub fn handle_enter(&mut self) {
+        if self.current_tab == Tab::Forest {
+            self.forest_enter();
+        }
+    }
+
+    pub fn handle_esc(&mut self) {
+        if self.current_tab == Tab::Forest {
+            self.forest_escape();
+        }
     }
 }

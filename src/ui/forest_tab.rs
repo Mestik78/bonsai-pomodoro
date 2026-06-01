@@ -21,7 +21,7 @@ pub fn render(frame: &mut Frame, app: &mut App, inner_area: Rect) {
         return;
     }
 
-    let mut days_order = Vec::new();
+    let days_order = &app.forest.cached_days;
     let mut days_map: std::collections::HashMap<String, Vec<&TimerSession>> = std::collections::HashMap::new();
     
     for t in finished_timers {
@@ -30,7 +30,6 @@ pub fn render(frame: &mut Frame, app: &mut App, inner_area: Rect) {
             Err(_) => t.start_time.clone(),
         };
         if !days_map.contains_key(&date_str) {
-            days_order.push(date_str.clone());
             days_map.insert(date_str.clone(), Vec::new());
         }
         days_map.get_mut(&date_str).unwrap().push(t);

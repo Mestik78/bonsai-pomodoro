@@ -12,6 +12,7 @@ use ratatui::{
 };
 
 use crate::app::{App, AppMode};
+use crate::models::tabs::Tab;
 
 pub fn render(frame: &mut Frame, app: &mut App) {
     let chunks = Layout::default()
@@ -26,9 +27,15 @@ pub fn render(frame: &mut Frame, app: &mut App) {
         Line::from(Span::styled(*t, Style::default().fg(Color::Green)))
     }).collect::<Vec<_>>();
 
+    let tab_index = match app.current_tab {
+        Tab::Timer => 0,
+        Tab::Forest => 1,
+        Tab::Stats => 2,
+    };
+
     let tabs = Tabs::new(titles)
         .block(Block::default().borders(Borders::ALL).title(" Bonsai Pomodoro "))
-        .select(app.current_tab)
+        .select(tab_index)
         .style(Style::default().fg(Color::White))
         .highlight_style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD));
 
@@ -48,9 +55,8 @@ pub fn render(frame: &mut Frame, app: &mut App) {
     }
 
     match app.current_tab {
-        0 => timer_tab::render(frame, app, inner_area),
-        1 => forest_tab::render(frame, app, inner_area),
-        2 => stats_tab::render(frame, app, inner_area),
-        _ => unreachable!(),
+        Tab::Timer => timer_tab::render(frame, app, inner_area),
+        Tab::Forest => forest_tab::render(frame, app, inner_area),
+        Tab::Stats => stats_tab::render(frame, app, inner_area),
     }
 }

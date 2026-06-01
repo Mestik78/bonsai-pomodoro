@@ -20,6 +20,7 @@ pub struct ForestState {
     pub selected_bonsai: usize,
     pub cols: usize,
     pub last_nav_dir: NavDir,
+    pub cached_days: Vec<String>,
 }
 
 impl ForestState {
@@ -31,7 +32,12 @@ impl ForestState {
             selected_bonsai: 0,
             cols: 1,
             last_nav_dir: NavDir::Down,
+            cached_days: Vec::new(),
         }
+    }
+
+    pub fn update_cache(&mut self, timers: &[TimerSession]) {
+        self.cached_days = Self::get_unique_days(timers);
     }
 
     pub fn get_unique_days(timers: &[TimerSession]) -> Vec<String> {
@@ -48,8 +54,8 @@ impl ForestState {
         days
     }
 
-    pub fn next(&mut self, timers: &[TimerSession]) {
-        let days_count = Self::get_unique_days(timers).len();
+    pub fn next(&mut self) {
+        let days_count = self.cached_days.len();
         if days_count == 0 { return; }
         if self.selected_day >= days_count - 1 {
             self.selected_day = 0;
@@ -60,8 +66,8 @@ impl ForestState {
         }
     }
 
-    pub fn previous(&mut self, timers: &[TimerSession]) {
-        let days_count = Self::get_unique_days(timers).len();
+    pub fn previous(&mut self) {
+        let days_count = self.cached_days.len();
         if days_count == 0 { return; }
         if self.selected_day == 0 {
             self.selected_day = days_count - 1;
@@ -72,8 +78,8 @@ impl ForestState {
         }
     }
 
-    pub fn enter(&mut self, timers: &[TimerSession]) {
-        if Self::get_unique_days(timers).is_empty() { return; }
+    pub fn enter(&mut self) {
+        if self.cached_days.is_empty() { return; }
         self.level = ForestLevel::Bonsai;
         self.selected_bonsai = 0;
     }
@@ -83,12 +89,11 @@ impl ForestState {
     }
 
     pub fn get_bonsai_count_for_selected_day(&self, timers: &[TimerSession]) -> usize {
-        let days = Self::get_unique_days(timers);
-        if days.is_empty() { return 0; }
+        if self.cached_days.is_empty() { return 0; }
         
         let selected_idx = self.selected_day;
-        if selected_idx >= days.len() { return 0; }
-        let date_str = &days[selected_idx];
+        if selected_idx >= self.cached_days.len() { return 0; }
+        let date_str = &self.cached_days[selected_idx];
         
         timers.iter().filter(|t| t.state.is_none() && {
             let t_date_str = match chrono::DateTime::parse_from_rfc3339(&t.start_time) {
@@ -107,7 +112,7 @@ impl ForestState {
         if self.selected_bonsai > 0 {
             self.selected_bonsai -= 1;
         } else {
-            self.previous(timers);
+            self.previous();
             let new_count = self.get_bonsai_count_for_selected_day(timers);
             self.selected_bonsai = new_count.saturating_sub(1);
         }
@@ -121,7 +126,7 @@ impl ForestState {
         if self.selected_bonsai + 1 < count {
             self.selected_bonsai += 1;
         } else {
-            self.next(timers);
+            self.next();
             self.selected_bonsai = 0;
         }
     }
@@ -136,7 +141,7 @@ impl ForestState {
             self.selected_bonsai -= cols;
         } else {
             let col = self.selected_bonsai % cols;
-            self.previous(timers);
+            self.previous();
             let new_count = self.get_bonsai_count_for_selected_day(timers);
             if new_count == 0 {
                 self.selected_bonsai = 0;
@@ -165,7 +170,7 @@ impl ForestState {
             self.selected_bonsai = target;
         } else {
             let col = self.selected_bonsai % cols;
-            self.next(timers);
+            self.next();
             let new_count = self.get_bonsai_count_for_selected_day(timers);
             if new_count == 0 {
                 self.selected_bonsai = 0;
