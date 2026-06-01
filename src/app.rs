@@ -59,25 +59,30 @@ pub struct App {
     pub timers: Vec<TimerSession>,
     pub last_tick: Instant,
     pub mode: AppMode,
+    pub is_production: bool,
 }
 
 impl App {
-    fn state_file_path() -> Option<std::path::PathBuf> {
+    fn state_file_path(is_production: bool) -> Option<std::path::PathBuf> {
         if let Some(proj_dirs) = ProjectDirs::from("com", "Mestik", "BonsaiPomodoro") {
             let data_dir = proj_dirs.data_dir();
             if !data_dir.exists() {
                 let _ = fs::create_dir_all(data_dir);
             }
-            Some(data_dir.join("state.json"))
+            if is_production {
+                Some(data_dir.join("state.json"))
+            } else {
+                Some(data_dir.join("state_dev.json"))
+            }
         } else {
             None
         }
     }
 
-    pub fn new() -> Self {
+    pub fn new(is_production: bool) -> Self {
         let mut timers = Vec::new();
         
-        if let Some(path) = Self::state_file_path() {
+        if let Some(path) = Self::state_file_path(is_production) {
             if let Ok(content) = fs::read_to_string(&path) {
                 if let Ok(state) = serde_json::from_str::<AppState>(&content) {
                     timers = state.timers;
@@ -117,11 +122,12 @@ impl App {
             timers,
             last_tick: Instant::now(),
             mode: AppMode::Normal,
+            is_production,
         }
     }
 
     pub fn save_state(&self) {
-        if let Some(path) = Self::state_file_path() {
+        if let Some(path) = Self::state_file_path(self.is_production) {
             let state = AppState {
                 timers: self.timers.clone(),
             };

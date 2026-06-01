@@ -12,6 +12,9 @@ use ratatui::{backend::CrosstermBackend, Terminal};
 use crate::app::{App, AppMode};
 
 fn main() -> io::Result<()> {
+    let args: Vec<String> = std::env::args().collect();
+    let is_production = args.contains(&"--user".to_string());
+
     // Setup terminal
     enable_raw_mode()?;
     let mut stdout = io::stdout();
@@ -20,7 +23,7 @@ fn main() -> io::Result<()> {
     let mut terminal = Terminal::new(backend)?;
 
     // Create app state
-    let mut app = App::new();
+    let mut app = App::new(is_production);
 
     // Run application loop
     let res = run_app(&mut terminal, &mut app);
