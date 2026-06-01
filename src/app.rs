@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use directories::ProjectDirs;
 use chrono::Utc;
+use ratatui::widgets::ListState;
 
 #[derive(PartialEq)]
 pub enum AppMode {
@@ -60,6 +61,7 @@ pub struct App {
     pub last_tick: Instant,
     pub mode: AppMode,
     pub is_production: bool,
+    pub bosque_state: ListState,
 }
 
 impl App {
@@ -115,6 +117,12 @@ impl App {
             });
         }
 
+        let finished_count = timers.iter().filter(|t| t.state.is_none()).count();
+        let mut bosque_state = ListState::default();
+        if finished_count > 0 {
+            bosque_state.select(Some(0));
+        }
+
         Self {
             current_tab: 0,
             should_quit: false,
@@ -123,6 +131,7 @@ impl App {
             last_tick: Instant::now(),
             mode: AppMode::Normal,
             is_production,
+            bosque_state,
         }
     }
 
@@ -354,5 +363,37 @@ impl App {
         
         self.save_state();
         self.mode = AppMode::Normal;
+    }
+
+    pub fn bosque_next(&mut self) {
+        let finished_count = self.timers.iter().filter(|t| t.state.is_none()).count();
+        if finished_count == 0 { return; }
+        let i = match self.bosque_state.selected() {
+            Some(i) => {
+                if i >= finished_count - 1 {
+                    0
+                } else {
+                    i + 1
+                }
+            }
+            None => 0,
+        };
+        self.bosque_state.select(Some(i));
+    }
+
+    pub fn bosque_previous(&mut self) {
+        let finished_count = self.timers.iter().filter(|t| t.state.is_none()).count();
+        if finished_count == 0 { return; }
+        let i = match self.bosque_state.selected() {
+            Some(i) => {
+                if i == 0 {
+                    finished_count - 1
+                } else {
+                    i - 1
+                }
+            }
+            None => 0,
+        };
+        self.bosque_state.select(Some(i));
     }
 }

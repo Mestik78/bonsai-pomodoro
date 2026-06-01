@@ -2,14 +2,15 @@ use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, Paragraph, Tabs},
+    widgets::{Block, Borders, List, ListItem, Paragraph, Tabs},
     Frame,
 };
 use tui_big_text::{BigText, PixelSize};
+use chrono::DateTime;
 
-use crate::app::{App, TimerState, AppMode};
+use crate::app::{App, TimerState, AppMode, TimerSession};
 
-pub fn render(frame: &mut Frame, app: &App) {
+pub fn render(frame: &mut Frame, app: &mut App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
@@ -139,22 +140,49 @@ pub fn render(frame: &mut Frame, app: &App) {
             frame.render_widget(help_p, vert_chunks[5]);
         },
         1 => {
-            // Pestaña Bosque
-            let vert_chunks = Layout::default()
-                .direction(Direction::Vertical)
-                .constraints([
-                    Constraint::Min(0),
-                    Constraint::Length(1),
-                    Constraint::Min(0),
-                ])
-                .split(inner_area);
-                
-            let help_text = "El bosque está descansando. Aquí crecerán tus árboles en futuras versiones.";
-            let paragraph = Paragraph::new(help_text)
-                .alignment(Alignment::Center)
-                .style(Style::default().fg(Color::DarkGray));
-                
-            frame.render_widget(paragraph, vert_chunks[1]);
+            let finished_timers: Vec<&TimerSession> = app.timers.iter().filter(|t| t.state.is_none()).collect();
+            
+            if finished_timers.is_empty() {
+                let p = Paragraph::new("Aún no tienes sesiones finalizadas.")
+                    .alignment(Alignment::Center)
+                    .block(Block::default().borders(Borders::ALL));
+                frame.render_widget(p, inner_area);
+            } else {
+                let items: Vec<ListItem> = finished_timers.into_iter().map(|t| {
+                    let date_str = match DateTime::parse_from_rfc3339(&t.start_time) {
+                        Ok(dt) => dt.format("%Y-%m-%d %H:%M").to_string(),
+                        Err(_) => t.start_time.clone(),
+                    };
+                    
+                    let duration = t.actual_runtime.unwrap_or(t.duration);
+                    let minutes = duration / 60;
+                    let seconds = duration % 60;
+                    let title = t.title.as_deref().unwrap_or("Sin Título");
+                    
+                    let header = format!("{} | {} | {:02}:{:02}", title, date_str, minutes, seconds);
+                    
+                    let mut text_lines = vec![
+                        ratatui::text::Line::from(ratatui::text::Span::styled(
+                            header,
+                            Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)
+                        ))
+                    ];
+                    
+                    if let Some(desc) = &t.description {
+                        text_lines.push(ratatui::text::Line::from(desc.as_str()));
+                    }
+                    
+                    ListItem::new(text_lines)
+                        .style(Style::default().fg(Color::White))
+                }).collect();
+
+                let list = List::new(items)
+                    .block(Block::default().borders(Borders::ALL).title(" Historial del Bosque "))
+                    .highlight_style(Style::default().bg(Color::DarkGray).add_modifier(Modifier::BOLD))
+                    .highlight_symbol(">> ");
+
+                frame.render_stateful_widget(list, inner_area, &mut app.bosque_state);
+            }
         },
         _ => unreachable!(),
     }

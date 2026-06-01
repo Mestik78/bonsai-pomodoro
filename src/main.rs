@@ -79,6 +79,8 @@ fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, app: &mut App)
                                         } else {
                                             app.add_minutes(1);
                                         }
+                                    } else if app.current_tab == 1 {
+                                        app.bosque_previous();
                                     }
                                 },
                                 KeyCode::Down => {
@@ -88,6 +90,8 @@ fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, app: &mut App)
                                         } else {
                                             app.add_minutes(-1);
                                         }
+                                    } else if app.current_tab == 1 {
+                                        app.bosque_next();
                                     }
                                 },
                                 _ => {}
