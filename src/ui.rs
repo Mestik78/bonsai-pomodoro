@@ -77,7 +77,12 @@ pub fn render(frame: &mut Frame, app: &mut App) {
         // Draw Bonsai in right half
         let active_timer = app.active_timer();
         let seed = active_timer.seed;
-        let canvas = bonsai::generate_bonsai(seed, 1.0);
+        let progress = if let Some(actual) = active_timer.actual_runtime {
+            (actual as f32 / active_timer.duration as f32).clamp(0.0, 1.0)
+        } else {
+            1.0
+        };
+        let canvas = bonsai::generate_bonsai(seed, progress);
         let bonsai_lines = canvas.render(1.0);
         
         let bonsai_p = Paragraph::new(bonsai_lines.clone())
@@ -282,10 +287,11 @@ pub fn render(frame: &mut Frame, app: &mut App) {
                         let duration = t.actual_runtime.unwrap_or(t.duration);
                         let mins = duration / 60;
                         let secs = duration % 60;
+                        let progress = (duration as f32 / t.duration as f32).clamp(0.0, 1.0);
                         
                         let header1 = format!("{}  {:02}:{:02}", time_str, mins, secs);
                         
-                        let mini_canvas = bonsai::generate_bonsai(t.seed, 1.0);
+                        let mini_canvas = bonsai::generate_bonsai(t.seed, progress);
                         let mini_lines = mini_canvas.render(0.25);
                         
                         let mut block_lines = Vec::new();
