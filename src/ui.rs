@@ -391,7 +391,15 @@ pub fn render(frame: &mut Frame, app: &mut App) {
                         if is_selected && app.forest_level == crate::app::ForestLevel::Bonsai {
                             let selected_row = app.forest_selected_bonsai / cols;
                             if row_idx == selected_row {
-                                target_line_idx = current_line;
+                                if app.forest_last_nav_dir == crate::app::NavDir::Down {
+                                    target_line_idx = current_line + max_height.saturating_sub(1);
+                                } else {
+                                    if selected_row == 0 {
+                                        target_line_idx = day_start_line;
+                                    } else {
+                                        target_line_idx = current_line;
+                                    }
+                                }
                             }
                         }
                         

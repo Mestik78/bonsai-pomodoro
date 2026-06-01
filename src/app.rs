@@ -500,10 +500,13 @@ impl App {
         if self.forest_level != ForestLevel::Bonsai { return; }
         let count = self.get_bonsai_count_for_selected_day();
         if count == 0 { return; }
+        self.forest_last_nav_dir = NavDir::Up;
         if self.forest_selected_bonsai > 0 {
             self.forest_selected_bonsai -= 1;
         } else {
-            self.forest_selected_bonsai = count - 1;
+            self.forest_previous();
+            let new_count = self.get_bonsai_count_for_selected_day();
+            self.forest_selected_bonsai = new_count.saturating_sub(1);
         }
     }
 
@@ -511,24 +514,38 @@ impl App {
         if self.forest_level != ForestLevel::Bonsai { return; }
         let count = self.get_bonsai_count_for_selected_day();
         if count == 0 { return; }
-        self.forest_selected_bonsai = (self.forest_selected_bonsai + 1) % count;
+        self.forest_last_nav_dir = NavDir::Down;
+        if self.forest_selected_bonsai + 1 < count {
+            self.forest_selected_bonsai += 1;
+        } else {
+            self.forest_next();
+            self.forest_selected_bonsai = 0;
+        }
     }
 
     pub fn forest_nav_up(&mut self) {
         if self.forest_level != ForestLevel::Bonsai { return; }
         let count = self.get_bonsai_count_for_selected_day();
         if count == 0 { return; }
+        self.forest_last_nav_dir = NavDir::Up;
         let cols = self.forest_cols.max(1);
         if self.forest_selected_bonsai >= cols {
             self.forest_selected_bonsai -= cols;
         } else {
-            let rem = count % cols;
-            let last_row_start = count - rem;
-            let target = last_row_start + self.forest_selected_bonsai;
-            if target >= count {
-                self.forest_selected_bonsai = target.saturating_sub(cols);
+            let col = self.forest_selected_bonsai % cols;
+            self.forest_previous();
+            let new_count = self.get_bonsai_count_for_selected_day();
+            if new_count == 0 {
+                self.forest_selected_bonsai = 0;
             } else {
-                self.forest_selected_bonsai = target;
+                let rem = new_count % cols;
+                let last_row_start = new_count - rem;
+                let target = last_row_start + col;
+                if target >= new_count {
+                    self.forest_selected_bonsai = target.saturating_sub(cols);
+                } else {
+                    self.forest_selected_bonsai = target;
+                }
             }
         }
     }
@@ -537,13 +554,21 @@ impl App {
         if self.forest_level != ForestLevel::Bonsai { return; }
         let count = self.get_bonsai_count_for_selected_day();
         if count == 0 { return; }
+        self.forest_last_nav_dir = NavDir::Down;
         let cols = self.forest_cols.max(1);
         
         let target = self.forest_selected_bonsai + cols;
         if target < count {
             self.forest_selected_bonsai = target;
         } else {
-            self.forest_selected_bonsai = self.forest_selected_bonsai % cols;
+            let col = self.forest_selected_bonsai % cols;
+            self.forest_next();
+            let new_count = self.get_bonsai_count_for_selected_day();
+            if new_count == 0 {
+                self.forest_selected_bonsai = 0;
+            } else {
+                self.forest_selected_bonsai = col.min(new_count.saturating_sub(1));
+            }
         }
     }
 
