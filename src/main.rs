@@ -77,6 +77,7 @@ fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, app: &mut App)
         app.on_tick();
 
         if app.should_quit {
+            app.save_state();
             return Ok(());
         }
     }

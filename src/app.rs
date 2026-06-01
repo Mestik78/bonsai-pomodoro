@@ -1,4 +1,13 @@
 use std::time::Instant;
+use serde::{Deserialize, Serialize};
+use std::fs;
+use directories::ProjectDirs;
+
+#[derive(Serialize, Deserialize)]
+struct AppState {
+    time_left: u64,
+}
+
 
 pub struct App {
     pub current_tab: usize,
@@ -10,14 +19,47 @@ pub struct App {
 }
 
 impl App {
+    fn state_file_path() -> Option<std::path::PathBuf> {
+        if let Some(proj_dirs) = ProjectDirs::from("com", "Mestik", "BonsaiPomodoro") {
+            let data_dir = proj_dirs.data_dir();
+            if !data_dir.exists() {
+                let _ = fs::create_dir_all(data_dir);
+            }
+            Some(data_dir.join("state.json"))
+        } else {
+            None
+        }
+    }
+
     pub fn new() -> Self {
+        let mut time_left = 50 * 60; // 50 minutos iniciales
+        
+        if let Some(path) = Self::state_file_path() {
+            if let Ok(content) = fs::read_to_string(&path) {
+                if let Ok(state) = serde_json::from_str::<AppState>(&content) {
+                    time_left = state.time_left;
+                }
+            }
+        }
+
         Self {
             current_tab: 0,
             should_quit: false,
             tab_titles: vec!["Temporizador", "Bosque"],
-            time_left: 50 * 60, // 50 minutos iniciales
+            time_left,
             is_running: false,
             last_tick: Instant::now(),
+        }
+    }
+
+    pub fn save_state(&self) {
+        if let Some(path) = Self::state_file_path() {
+            let state = AppState {
+                time_left: self.time_left,
+            };
+            if let Ok(json) = serde_json::to_string(&state) {
+                let _ = fs::write(path, json);
+            }
         }
     }
 
