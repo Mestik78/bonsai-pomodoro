@@ -24,8 +24,8 @@ impl PlantsState {
             last_tick: None,
             plant_types: vec![
                 ("Bonsai", PlantType::Bonsai),
-                ("Cactus", PlantType::Cactus),
                 ("LemonTree", PlantType::LemonTree),
+                ("Cactus", PlantType::Cactus),
             ],
         }
     }

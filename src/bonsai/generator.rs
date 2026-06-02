@@ -19,16 +19,18 @@ pub fn generate_bonsai(seed: u64, progress: f32, fruit: Option<Fruit>, fruit_qua
     // First pass: find total steps
     let mut dummy_canvas = BonsaiCanvas::new();
     let mut rng = StdRng::seed_from_u64(seed);
+    let mut fruit_rng = StdRng::seed_from_u64(seed);
     let mut total_steps = 0;
-    branch(&mut dummy_canvas, &mut rng, 0, 0, BranchType::Trunk, life, multiplier, &mut total_steps, i32::MAX, &fruit, fruit_quantity);
+    branch(&mut dummy_canvas, &mut rng, &mut fruit_rng, 0, 0, BranchType::Trunk, life, multiplier, &mut total_steps, i32::MAX, &fruit, fruit_quantity);
     
     // Second pass: generate actual tree
     let mut canvas = BonsaiCanvas::new();
     if progress > 0.0 {
         let mut rng = StdRng::seed_from_u64(seed);
+        let mut fruit_rng = StdRng::seed_from_u64(seed);
         let mut steps = 0;
         let max_steps = (progress * total_steps as f32).max(1.0) as i32;
-        branch(&mut canvas, &mut rng, 0, 0, BranchType::Trunk, life, multiplier, &mut steps, max_steps, &fruit, fruit_quantity);
+        branch(&mut canvas, &mut rng, &mut fruit_rng, 0, 0, BranchType::Trunk, life, multiplier, &mut steps, max_steps, &fruit, fruit_quantity);
     }
     
     canvas
@@ -152,7 +154,7 @@ fn choose_string(rng: &mut StdRng, mut btype: BranchType, life: i32, dx: i32, dy
     }
 }
 
-fn branch(canvas: &mut BonsaiCanvas, rng: &mut StdRng, mut y: i32, mut x: i32, btype: BranchType, mut life: i32, multiplier: i32, steps: &mut i32, max_steps: i32, fruit: &Option<Fruit>, fruit_quantity: u32) {
+fn branch(canvas: &mut BonsaiCanvas, rng: &mut StdRng, fruit_rng: &mut StdRng, mut y: i32, mut x: i32, btype: BranchType, mut life: i32, multiplier: i32, steps: &mut i32, max_steps: i32, fruit: &Option<Fruit>, fruit_quantity: u32) {
     let mut shoot_cooldown = multiplier;
     let life_start = life;
     
@@ -167,21 +169,21 @@ fn branch(canvas: &mut BonsaiCanvas, rng: &mut StdRng, mut y: i32, mut x: i32, b
         let (dx, dy) = set_deltas(rng, btype, life, age, multiplier);
         
         if life < 3 {
-            branch(canvas, rng, y, x, BranchType::Dead, life, multiplier, steps, max_steps, fruit, fruit_quantity);
+            branch(canvas, rng, fruit_rng, y, x, BranchType::Dead, life, multiplier, steps, max_steps, fruit, fruit_quantity);
         } else if btype == BranchType::Trunk && life < multiplier + 2 {
-            branch(canvas, rng, y, x, BranchType::Dying, life, multiplier, steps, max_steps, fruit, fruit_quantity);
+            branch(canvas, rng, fruit_rng, y, x, BranchType::Dying, life, multiplier, steps, max_steps, fruit, fruit_quantity);
         } else if (btype == BranchType::ShootLeft || btype == BranchType::ShootRight) && life < multiplier + 2 {
-            branch(canvas, rng, y, x, BranchType::Dying, life, multiplier, steps, max_steps, fruit, fruit_quantity);
+            branch(canvas, rng, fruit_rng, y, x, BranchType::Dying, life, multiplier, steps, max_steps, fruit, fruit_quantity);
         } else if btype == BranchType::Trunk && (rng.gen_range(0..3) == 0 || life % multiplier == 0) {
             if rng.gen_range(0..8) == 0 && life > 7 {
                 shoot_cooldown = multiplier * 2;
                 let added_life = rng.gen_range(-2..=2);
-                branch(canvas, rng, y, x, BranchType::Trunk, life + added_life, multiplier, steps, max_steps, fruit, fruit_quantity);
+                branch(canvas, rng, fruit_rng, y, x, BranchType::Trunk, life + added_life, multiplier, steps, max_steps, fruit, fruit_quantity);
             } else if shoot_cooldown <= 0 {
                 shoot_cooldown = multiplier * 2;
                 let shoot_life = life + multiplier;
                 let shoot_type = if rng.gen_bool(0.5) { BranchType::ShootLeft } else { BranchType::ShootRight };
-                branch(canvas, rng, y, x, shoot_type, shoot_life, multiplier, steps, max_steps, fruit, fruit_quantity);
+                branch(canvas, rng, fruit_rng, y, x, shoot_type, shoot_life, multiplier, steps, max_steps, fruit, fruit_quantity);
             }
         }
         shoot_cooldown -= 1;
@@ -194,7 +196,7 @@ fn branch(canvas: &mut BonsaiCanvas, rng: &mut StdRng, mut y: i32, mut x: i32, b
         
         if (btype == BranchType::Dying || btype == BranchType::Dead) && (s == "&" || s == "*") {
             if let Some(f) = fruit {
-                if rng.gen_range(0..100) < fruit_quantity {
+                if fruit_rng.gen_range(0..100) < fruit_quantity {
                     s = f.character.to_string();
                     color = f.color;
                 }

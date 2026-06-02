@@ -17,8 +17,8 @@ impl Fruit {
 #[derive(Serialize, Deserialize, Clone, PartialEq)]
 pub enum PlantType {
     Bonsai,
-    Cactus,
     LemonTree,
+    Cactus,
 }
 
 impl Default for PlantType {
@@ -42,7 +42,10 @@ impl Plant {
 pub fn generate_plant(plant: &Plant) -> bonsai::canvas::BonsaiCanvas {
     match plant.plant_type {
         PlantType::Bonsai => bonsai::generate_bonsai(plant.seed, plant.progress, None, 0),
-        PlantType::Cactus => bonsai::generate_cactus(plant.seed, plant.progress),
+        PlantType::Cactus => {
+            let flower = Fruit::new('✿', Color::Rgb(255, 20, 147));
+            bonsai::generate_cactus(plant.seed, plant.progress, Some(flower), 2)
+        },
         PlantType::LemonTree => {
             let lemon = Fruit::new('●', Color::Rgb(255, 244, 79));
             bonsai::generate_bonsai(plant.seed, plant.progress, Some(lemon), 4)
