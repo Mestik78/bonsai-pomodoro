@@ -13,22 +13,34 @@ pub fn handle_event(app: &mut App, tick_rate: Duration) -> io::Result<bool> {
                             KeyCode::Left => app.dispatch_event(crate::models::tabs::TabEvent::Left),
                             KeyCode::Right => app.dispatch_event(crate::models::tabs::TabEvent::Right),
                             KeyCode::Tab => app.next_tab(),
+                            KeyCode::Char('s') => {
+                                if app.current_tab == crate::models::tabs::Tab::Timer {
+                                    if app.timers[0].state == Some(crate::models::timer::TimerState::New) {
+                                        app.is_selecting_plant = true;
+                                        app.timers[0].seed = rand::random();
+                                    }
+                                }
+                            },
                             KeyCode::Char(' ') => {
                                 if app.current_tab == crate::models::tabs::Tab::Plants {
                                     app.plants.toggle_animation();
-                                } else {
+                                } else if app.current_tab != crate::models::tabs::Tab::Timer || !app.is_selecting_plant {
                                     app.toggle_timer();
                                 }
                             },
                             KeyCode::Char('r') => {
                                 if app.current_tab == crate::models::tabs::Tab::Timer {
-                                    app.reset_timer();
+                                    if app.is_selecting_plant {
+                                        app.timers[0].seed = rand::random();
+                                    } else {
+                                        app.reset_timer();
+                                    }
                                 } else if app.current_tab == crate::models::tabs::Tab::Plants {
                                     app.plants.seed = rand::random();
                                 }
                             },
                             KeyCode::Char('f') => {
-                                if app.current_tab == crate::models::tabs::Tab::Timer {
+                                if app.current_tab == crate::models::tabs::Tab::Timer && !app.is_selecting_plant {
                                     app.finish_early();
                                 }
                             },

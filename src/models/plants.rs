@@ -104,6 +104,7 @@ impl PlantsState {
                     EventResult::Ignored
                 }
             },
+            TabEvent::Tab => EventResult::Ignored,
         }
     }
 

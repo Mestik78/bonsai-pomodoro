@@ -39,7 +39,7 @@ pub struct TimerSession {
 }
 
 impl TimerSession {
-    pub fn new(duration: u64) -> Self {
+    pub fn new(duration: u64, plant_type: PlantType) -> Self {
         Self {
             start_time: chrono::Utc::now().to_rfc3339(),
             duration,
@@ -49,7 +49,7 @@ impl TimerSession {
             title: None,
             description: None,
             seed: rand::random(),
-            plant_type: PlantType::Bonsai,
+            plant_type,
         }
     }
 
@@ -123,7 +123,7 @@ impl TimerSession {
         }
     }
 
-    pub fn tick(&mut self, last_tick: &mut std::time::Instant) -> bool {
+    pub fn tick(&mut self, last_tick: &mut std::time::Instant, is_production: bool) -> bool {
         let state_clone = self.state.clone();
         if let Some(TimerState::Starting(start_time_str)) = state_clone {
             if let Ok(start_time) = chrono::DateTime::parse_from_rfc3339(&start_time_str) {
@@ -138,17 +138,22 @@ impl TimerSession {
 
         if self.state == Some(TimerState::Running) {
             let now = std::time::Instant::now();
-            let elapsed = now.duration_since(*last_tick).as_secs();
+            let speed_multiplier = if is_production { 1 } else { 600 };
             
-            if elapsed >= 1 {
+            let elapsed_real_ms = now.duration_since(*last_tick).as_millis() as u64;
+            let sim_secs = (elapsed_real_ms * speed_multiplier) / 1000;
+            
+            if sim_secs > 0 {
+                let consumed_real_ms = (sim_secs * 1000) / speed_multiplier;
+                
                 let current_time = self.time_left.unwrap_or(0);
-                if current_time >= elapsed {
-                    self.time_left = Some(current_time - elapsed);
+                if current_time >= sim_secs {
+                    self.time_left = Some(current_time - sim_secs);
                 } else {
                     self.time_left = Some(0);
                 }
 
-                *last_tick += std::time::Duration::from_secs(elapsed);
+                *last_tick += std::time::Duration::from_millis(consumed_real_ms);
 
                 if self.time_left == Some(0) {
                     self.actual_runtime = None;

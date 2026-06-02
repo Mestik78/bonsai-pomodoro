@@ -28,6 +28,21 @@ impl Default for PlantType {
     }
 }
 
+impl PlantType {
+    pub fn all() -> Vec<PlantType> {
+        vec![PlantType::Bonsai, PlantType::Cactus, PlantType::LemonTree, PlantType::Bush]
+    }
+    
+    pub fn to_string(&self) -> String {
+        match self {
+            PlantType::Bonsai => "Bonsai".to_string(),
+            PlantType::LemonTree => "Lemon Tree".to_string(),
+            PlantType::Cactus => "Cactus".to_string(),
+            PlantType::Bush => "Bush".to_string(),
+        }
+    }
+}
+
 pub struct Plant {
     pub seed: u64,
     pub plant_type: PlantType,

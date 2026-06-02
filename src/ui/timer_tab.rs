@@ -1,8 +1,8 @@
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Style},
-    text::Span,
-    widgets::{Block, Borders, Paragraph},
+    text::{Span, Line},
+    widgets::{Block, Borders, Paragraph, List, ListItem},
     Frame,
 };
 use tui_big_text::{BigText, PixelSize};
@@ -57,7 +57,9 @@ pub fn render(frame: &mut Frame, app: &App, inner_area: Rect) {
 
     // 1. Draw Bonsai Fullscreen
     let seed = active_timer.seed;
-    let progress = if active_timer.state == Some(TimerState::New) || matches!(active_timer.state, Some(TimerState::Starting(_))) {
+    let progress = if app.is_selecting_plant {
+        1.0
+    } else if active_timer.state == Some(TimerState::New) || matches!(active_timer.state, Some(TimerState::Starting(_))) {
         0.0
     } else {
         let actual = active_timer.duration.saturating_sub(time_to_show);
@@ -101,69 +103,74 @@ pub fn render(frame: &mut Frame, app: &App, inner_area: Rect) {
         
     frame.render_widget(bonsai_p, bonsai_vert_chunks[1]);
     
-    // 2. Overlay Timer Widget
-    let use_compact_timer = inner_area.height < 25 || inner_area.width < 52;
-
-    if use_compact_timer {
-        let timer_width = 16.max(status_text.len() as u16 + 4);
-        let timer_height = 3;
-        let offset_x = 2;
-        let offset_y = 1;
-        
-        let timer_area = ratatui::layout::Rect {
-            x: inner_area.x + offset_x,
-            y: inner_area.y + offset_y,
-            width: timer_width.min(inner_area.width.saturating_sub(offset_x)),
-            height: timer_height.min(inner_area.height.saturating_sub(offset_y)),
-        };
-        
-        let timer_block = Block::default()
-            .borders(Borders::ALL)
-            .title(Span::styled(format!(" {} ", status_text), Style::default().fg(status_color).add_modifier(ratatui::style::Modifier::BOLD)));
-            
-        frame.render_widget(ratatui::widgets::Clear, timer_area);
-        
-        let timer_p = Paragraph::new(Span::styled(time_str, Style::default().fg(Color::Green).add_modifier(ratatui::style::Modifier::BOLD)))
-            .alignment(Alignment::Center)
-            .block(timer_block);
-            
-        frame.render_widget(timer_p, timer_area);
+    // 2. Overlay Timer Widget or Selection Widget
+    let (timer_width, timer_height, use_compact) = if inner_area.height < 25 || inner_area.width < 52 {
+        let w = 16.max(status_text.len() as u16 + 4);
+        (w, 3, true)
     } else {
-        let timer_width = 45; // 39 text + 2 borders + 4 padding
-        let timer_height = 11; // 8 text + 2 borders + 1 top padding
-        let offset_x = 2;
-        let offset_y = 1;
+        (45, 11, false)
+    };
+    
+    let timer_area = ratatui::layout::Rect {
+        x: inner_area.x + (inner_area.width.saturating_sub(timer_width)) / 2,
+        y: inner_area.y + 1,
+        width: timer_width.min(inner_area.width.saturating_sub(4)),
+        height: timer_height.min(inner_area.height.saturating_sub(2)),
+    };
+
+    if app.is_selecting_plant {
+        let items: Vec<ListItem> = crate::models::plant::PlantType::all().iter().map(|p| {
+            ListItem::new(Line::from(Span::styled(p.to_string(), Style::default().fg(Color::White))))
+        }).collect();
+
+        let list = List::new(items)
+            .block(Block::default()
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(Color::DarkGray))
+                .title(Span::styled(" Select Plant ", Style::default().fg(Color::DarkGray))))
+            .highlight_style(Style::default().fg(Color::Yellow).add_modifier(ratatui::style::Modifier::BOLD));
+
+        frame.render_widget(ratatui::widgets::Clear, timer_area);
         
-        let timer_area = ratatui::layout::Rect {
-            x: inner_area.x + offset_x,
-            y: inner_area.y + offset_y,
-            width: timer_width.min(inner_area.width.saturating_sub(offset_x)),
-            height: timer_height.min(inner_area.height.saturating_sub(offset_y)),
-        };
-        
+        let mut list_state = app.timer_plant_list_state.clone();
+        frame.render_stateful_widget(list, timer_area, &mut list_state);
+    } else {
         let timer_block = Block::default()
             .borders(Borders::ALL)
+            .border_style(Style::default().fg(Color::DarkGray))
             .title(Span::styled(format!(" {} ", status_text), Style::default().fg(status_color).add_modifier(ratatui::style::Modifier::BOLD)));
             
         frame.render_widget(ratatui::widgets::Clear, timer_area);
-        frame.render_widget(timer_block, timer_area);
         
-        let inner_timer_area = ratatui::layout::Rect {
-            x: timer_area.x + 3,
-            y: timer_area.y + 2, // 1 for border + 1 for padding top
-            width: timer_area.width.saturating_sub(6),
-            height: 8, // exact BigText height
-        };
-        frame.render_widget(big_text, inner_timer_area);
+        if use_compact {
+            let timer_p = Paragraph::new(Span::styled(time_str, Style::default().fg(Color::Green).add_modifier(ratatui::style::Modifier::BOLD)))
+                .alignment(Alignment::Center)
+                .block(timer_block);
+            frame.render_widget(timer_p, timer_area);
+        } else {
+            frame.render_widget(timer_block, timer_area);
+            
+            let inner_timer_area = ratatui::layout::Rect {
+                x: timer_area.x + 3,
+                y: timer_area.y + 2,
+                width: timer_area.width.saturating_sub(6),
+                height: 8.min(timer_area.height.saturating_sub(2)),
+            };
+            if inner_timer_area.height > 0 && inner_timer_area.width > 0 {
+                frame.render_widget(big_text, inner_timer_area);
+            }
+        }
     }
     
     // 3. Overlay Help Text
-    let help_text = if inner_area.width < 31 {
-        "Space: Pause/Resume"
+    let help_text = if app.is_selecting_plant {
+        "Enter: Confirm | r: Reroll seed | Up/Down: Select"
+    } else if inner_area.width < 31 {
+        "s: Select Plant | Space: Start/Pause"
     } else if inner_area.width < 52 {
-        "Space: Pause/Resume  |  Up/Down: Adjust Minute"
+        "s: Select Plant | Space: Start/Pause | Up/Down: Time"
     } else {
-        "Space: Pause/Resume  |  Up/Down: Adjust Minute  |  Left/Right: Switch Tab"
+        "s: Select Plant | Space: Pause/Resume | Up/Down: Time | Left/Right: Tab"
     };
     let help_p = Paragraph::new(Span::styled(help_text, Style::default().fg(Color::DarkGray)))
         .alignment(Alignment::Center);

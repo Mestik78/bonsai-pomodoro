@@ -23,6 +23,8 @@ pub struct App {
     pub should_quit: bool,
     pub tab_titles: Vec<&'static str>,
     pub timers: Vec<TimerSession>,
+    pub timer_plant_list_state: ratatui::widgets::ListState,
+    pub is_selecting_plant: bool,
     pub last_tick: Instant,
     pub mode: AppMode,
     pub is_production: bool,
@@ -50,7 +52,7 @@ impl App {
         }
 
         if need_new {
-            timers.insert(0, TimerSession::new(new_duration));
+            timers.insert(0, TimerSession::new(new_duration, crate::models::plant::PlantType::Bonsai));
         }
 
         let finished_count = timers.iter().filter(|t| t.state.is_none()).count();
@@ -64,6 +66,9 @@ impl App {
         let stats = StatsState::new();
         let plants = PlantsState::new();
 
+        let mut timer_plant_list_state = ratatui::widgets::ListState::default();
+        timer_plant_list_state.select(Some(0));
+
         let mut tab_titles = vec!["Timer", "Forest", "Stats"];
         if !is_production {
             tab_titles.push("Plants");
@@ -74,6 +79,8 @@ impl App {
             should_quit: false,
             tab_titles,
             timers,
+            timer_plant_list_state,
+            is_selecting_plant: false,
             last_tick: Instant::now(),
             mode: AppMode::Normal,
             is_production,
@@ -101,7 +108,9 @@ impl App {
     pub fn toggle_timer(&mut self) {
         if self.timers[0].state.is_none() {
             let duration = self.timers[0].duration;
-            self.timers.insert(0, TimerSession::new(duration));
+            let selected_idx = self.timer_plant_list_state.selected().unwrap_or(0);
+            let selected_plant = crate::models::plant::PlantType::all()[selected_idx].clone();
+            self.timers.insert(0, TimerSession::new(duration, selected_plant));
         } else {
             self.timers[0].toggle(&mut self.last_tick);
         }
@@ -117,6 +126,10 @@ impl App {
 
     pub fn reset_timer(&mut self) {
         self.timers[0].reset();
+        let selected_idx = self.timer_plant_list_state.selected().unwrap_or(0);
+        let selected_plant = crate::models::plant::PlantType::all()[selected_idx].clone();
+        self.timers[0].plant_type = selected_plant;
+        self.timers[0].seed = rand::random();
     }
 
     pub fn finish_early(&mut self) {
@@ -133,7 +146,7 @@ impl App {
 
     pub fn on_tick(&mut self) {
         self.plants.tick();
-        if self.timers[0].tick(&mut self.last_tick) {
+        if self.timers[0].tick(&mut self.last_tick, self.is_production) {
             self.mode = AppMode::PostTimerInput {
                 title: String::new(),
                 description: String::new(),
@@ -207,7 +220,9 @@ impl App {
         }
         
         let new_duration = self.timers[0].duration;
-        self.timers.insert(0, TimerSession::new(new_duration));
+        let selected_idx = self.timer_plant_list_state.selected().unwrap_or(0);
+        let selected_plant = crate::models::plant::PlantType::all()[selected_idx].clone();
+        self.timers.insert(0, TimerSession::new(new_duration, selected_plant));
         
         self.save_state();
         self.mode = AppMode::Normal;
@@ -219,19 +234,52 @@ impl App {
     pub fn handle_timer_event(&mut self, event: &crate::models::tabs::TabEvent) -> crate::models::tabs::EventResult {
         use crate::models::tabs::{TabEvent, EventResult};
         match event {
+            TabEvent::Enter | TabEvent::Esc => {
+                if self.is_selecting_plant {
+                    self.is_selecting_plant = false;
+                    return EventResult::Consumed;
+                }
+                EventResult::Ignored
+            },
             TabEvent::Up { is_ctrl } => {
-                if *is_ctrl {
-                    self.add_seconds(1);
+                if !self.is_selecting_plant {
+                    if *is_ctrl {
+                        self.add_seconds(1);
+                    } else {
+                        self.add_minutes(1);
+                    }
                 } else {
-                    self.add_minutes(1);
+                    let i = match self.timer_plant_list_state.selected() {
+                        Some(i) => if i == 0 { crate::models::plant::PlantType::all().len() - 1 } else { i - 1 },
+                        None => 0,
+                    };
+                    self.timer_plant_list_state.select(Some(i));
+                    
+                    if self.timers[0].state == Some(crate::models::timer::TimerState::New) {
+                        self.timers[0].plant_type = crate::models::plant::PlantType::all()[i].clone();
+                        self.timers[0].seed = rand::random();
+                    }
                 }
                 EventResult::Consumed
             },
             TabEvent::Down { is_ctrl } => {
-                if *is_ctrl {
-                    self.add_seconds(-1);
+                if !self.is_selecting_plant {
+                    if *is_ctrl {
+                        self.add_seconds(-1);
+                    } else {
+                        self.add_minutes(-1);
+                    }
                 } else {
-                    self.add_minutes(-1);
+                    let i = match self.timer_plant_list_state.selected() {
+                        Some(i) => if i >= crate::models::plant::PlantType::all().len() - 1 { 0 } else { i + 1 },
+                        None => 0,
+                    };
+                    self.timer_plant_list_state.select(Some(i));
+                    
+                    if self.timers[0].state == Some(crate::models::timer::TimerState::New) {
+                        self.timers[0].plant_type = crate::models::plant::PlantType::all()[i].clone();
+                        self.timers[0].seed = rand::random();
+                    }
                 }
                 EventResult::Consumed
             },
@@ -252,6 +300,7 @@ impl App {
             match event {
                 crate::models::tabs::TabEvent::Left => self.previous_tab(),
                 crate::models::tabs::TabEvent::Right => self.next_tab(),
+                crate::models::tabs::TabEvent::Tab => self.next_tab(),
                 _ => {}
             }
         }
