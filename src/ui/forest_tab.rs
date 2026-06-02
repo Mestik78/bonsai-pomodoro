@@ -123,14 +123,22 @@ pub fn render(frame: &mut Frame, app: &mut App, inner_area: Rect) {
             if is_selected && app.forest.level == ForestLevel::Bonsai {
                 let selected_row = app.forest.selected_bonsai / cols;
                 if row_idx == selected_row {
-                    if app.forest.last_nav_dir == NavDir::Down {
+                    let list_height = inner_area.height as usize;
+                    if selected_row == 0 {
+                        if app.forest.last_nav_dir == NavDir::Down {
+                            let block_height = current_line - day_start_line;
+                            if block_height <= list_height {
+                                target_line_idx = current_line.saturating_sub(1);
+                            } else {
+                                target_line_idx = day_start_line + list_height.saturating_sub(1);
+                            }
+                        } else {
+                            target_line_idx = day_start_line;
+                        }
+                    } else if app.forest.last_nav_dir == NavDir::Down {
                         target_line_idx = current_line + max_height.saturating_sub(1);
                     } else {
-                        if selected_row == 0 {
-                            target_line_idx = day_start_line;
-                        } else {
-                            target_line_idx = current_line;
-                        }
+                        target_line_idx = current_line;
                     }
                 }
             }
@@ -159,8 +167,14 @@ pub fn render(frame: &mut Frame, app: &mut App, inner_area: Rect) {
         }
         
         if is_selected && app.forest.level == ForestLevel::Day {
+            let list_height = inner_area.height as usize;
             if app.forest.last_nav_dir == NavDir::Down {
-                target_line_idx = current_line.saturating_sub(1_usize);
+                let day_height = current_line - day_start_line;
+                if day_height <= list_height {
+                    target_line_idx = current_line.saturating_sub(1);
+                } else {
+                    target_line_idx = day_start_line + list_height.saturating_sub(1);
+                }
             } else {
                 target_line_idx = day_start_line;
             }

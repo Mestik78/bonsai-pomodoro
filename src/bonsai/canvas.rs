@@ -72,7 +72,7 @@ impl BonsaiCanvas {
             // Draw Full Pot
             let color_text = pot_color.unwrap_or(Color::DarkGray);
             let color_leaf = Color::Green;
-            let color_wood = Color::Rgb(160, 82, 45);
+            let _color_wood = Color::Rgb(160, 82, 45);
             
             let center_idx = (0 - min_x).max(0) as usize;
             
