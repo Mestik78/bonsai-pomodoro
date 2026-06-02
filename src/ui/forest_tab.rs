@@ -55,11 +55,17 @@ pub fn render(frame: &mut Frame, app: &App, inner_area: Rect) {
         return;
     }
     
-    let start_col = map.camera_x.div_euclid(tile_w as i32);
-    let end_col = (map.camera_x + screen_width as i32 - 1).div_euclid(tile_w as i32);
+    let start_x = map.camera_x - (screen_width as i32) / 2;
+    let start_y = map.camera_y + (screen_height as i32) / 2;
     
-    let start_row = map.camera_y.div_euclid(tile_h as i32);
-    let end_row = (map.camera_y + screen_height as i32 - 1).div_euclid(tile_h as i32);
+    let logical_start_x = start_x + (tile_w as i32) / 2;
+    let logical_start_y = start_y + (tile_h as i32) / 2;
+    
+    let start_col = logical_start_x.div_euclid(tile_w as i32);
+    let end_col = (logical_start_x + screen_width as i32 - 1).div_euclid(tile_w as i32);
+    
+    let min_row = (logical_start_y - screen_height as i32 + 1).div_euclid(tile_h as i32);
+    let max_row = logical_start_y.div_euclid(tile_h as i32);
     
     let plant = crate::models::plant::Plant::new(1234, crate::models::plant::PlantType::Bonsai, 1.0);
     let canvas = crate::models::plant::generate_plant(&plant);
@@ -67,7 +73,7 @@ pub fn render(frame: &mut Frame, app: &App, inner_area: Rect) {
 
     let mut tile_cache = HashMap::new();
     
-    for row in start_row..=end_row {
+    for row in min_row..=max_row {
         for col in start_col..=end_col {
             let tile_lines = if col == 0 && (row == 0 || row == 1) {
                 let tile = PlantTile {
@@ -87,9 +93,10 @@ pub fn render(frame: &mut Frame, app: &App, inner_area: Rect) {
     let mut all_lines = Vec::new();
     
     for screen_y in 0..screen_height {
-        let abs_y = map.camera_y + screen_y as i32;
+        let abs_y = logical_start_y - screen_y as i32;
         let map_row = abs_y.div_euclid(tile_h as i32);
-        let tile_y = abs_y.rem_euclid(tile_h as i32) as usize;
+        
+        let tile_y = (((map_row + 1) * (tile_h as i32) - 1 - abs_y) as usize).min(tile_h as usize - 1);
         
         let mut combined_spans = Vec::new();
         
@@ -99,12 +106,12 @@ pub fn render(frame: &mut Frame, app: &App, inner_area: Rect) {
                     let line = &tile_lines[tile_y];
                     
                     let x_skip = if col == start_col {
-                        map.camera_x.rem_euclid(tile_w as i32) as usize
+                        logical_start_x.rem_euclid(tile_w as i32) as usize
                     } else {
                         0
                     };
                     
-                    let abs_x_end = map.camera_x + screen_width as i32 - 1;
+                    let abs_x_end = logical_start_x + screen_width as i32 - 1;
                     let x_take = if col == end_col {
                         let tile_end_x = abs_x_end.rem_euclid(tile_w as i32) as usize;
                         tile_end_x - x_skip + 1
@@ -117,8 +124,8 @@ pub fn render(frame: &mut Frame, app: &App, inner_area: Rect) {
                         combined_spans.push(span);
                     }
                 } else {
-                    let x_skip = if col == start_col { map.camera_x.rem_euclid(tile_w as i32) as usize } else { 0 };
-                    let abs_x_end = map.camera_x + screen_width as i32 - 1;
+                    let x_skip = if col == start_col { logical_start_x.rem_euclid(tile_w as i32) as usize } else { 0 };
+                    let abs_x_end = logical_start_x + screen_width as i32 - 1;
                     let x_take = if col == end_col {
                         let tile_end_x = abs_x_end.rem_euclid(tile_w as i32) as usize;
                         tile_end_x - x_skip + 1

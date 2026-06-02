@@ -21,8 +21,8 @@ impl ForestState {
     pub fn handle_event(&mut self, event: &TabEvent) -> EventResult {
         if self.is_moving {
             match event {
-                TabEvent::Up { .. } => { self.tilemap.pan(0, -1); EventResult::Consumed },
-                TabEvent::Down { .. } => { self.tilemap.pan(0, 1); EventResult::Consumed },
+                TabEvent::Up { .. } => { self.tilemap.pan(0, 1); EventResult::Consumed },
+                TabEvent::Down { .. } => { self.tilemap.pan(0, -1); EventResult::Consumed },
                 TabEvent::Left => { self.tilemap.pan(-2, 0); EventResult::Consumed },
                 TabEvent::Right => { self.tilemap.pan(2, 0); EventResult::Consumed },
                 TabEvent::ZoomIn => { self.tilemap.zoom_in(); EventResult::Consumed },
