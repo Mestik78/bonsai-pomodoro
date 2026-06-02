@@ -300,7 +300,6 @@ impl App {
             match event {
                 crate::models::tabs::TabEvent::Left => self.previous_tab(),
                 crate::models::tabs::TabEvent::Right => self.next_tab(),
-                crate::models::tabs::TabEvent::Tab => self.next_tab(),
                 _ => {}
             }
         }

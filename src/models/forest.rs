@@ -79,7 +79,6 @@ impl ForestState {
                 self.escape();
                 EventResult::Consumed
             },
-            TabEvent::Tab => EventResult::Ignored,
         }
     }
 

@@ -45,7 +45,6 @@ pub enum TabEvent {
     Right,
     Enter,
     Esc,
-    Tab,
 }
 
 pub enum EventResult {
