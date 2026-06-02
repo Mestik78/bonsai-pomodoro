@@ -23,8 +23,8 @@ impl ForestState {
             match event {
                 TabEvent::Up { .. } => { self.tilemap.pan(0, -1); EventResult::Consumed },
                 TabEvent::Down { .. } => { self.tilemap.pan(0, 1); EventResult::Consumed },
-                TabEvent::Left => { self.tilemap.pan(-1, 0); EventResult::Consumed },
-                TabEvent::Right => { self.tilemap.pan(1, 0); EventResult::Consumed },
+                TabEvent::Left => { self.tilemap.pan(-2, 0); EventResult::Consumed },
+                TabEvent::Right => { self.tilemap.pan(2, 0); EventResult::Consumed },
                 TabEvent::ZoomIn => { self.tilemap.zoom_in(); EventResult::Consumed },
                 TabEvent::ZoomOut => { self.tilemap.zoom_out(); EventResult::Consumed },
                 TabEvent::Esc => { self.is_moving = false; EventResult::Consumed },
