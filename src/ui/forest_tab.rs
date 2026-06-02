@@ -8,7 +8,7 @@ use ratatui::{
 use std::collections::HashMap;
 
 use crate::app::App;
-use crate::models::tile::{Tile, PlantTile, EmptyTile};
+use crate::models::tile::{Tile, PlantTile, EmptyTile, PathTile};
 
 fn slice_line(line: &Line, skip: usize, take: usize) -> Line<'static> {
     let mut skipped = 0;
@@ -83,6 +83,8 @@ pub fn render(frame: &mut Frame, app: &App, inner_area: Rect) {
                     pot_color: None,
                 };
                 tile.render(tile_w, tile_h)
+            } else if col % 3 == 0 || row % 3 == 0 {
+                PathTile.render(tile_w, tile_h)
             } else {
                 EmptyTile.render(tile_w, tile_h)
             };

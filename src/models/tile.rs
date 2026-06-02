@@ -31,3 +31,27 @@ impl Tile for EmptyTile {
         lines
     }
 }
+
+pub struct PathTile;
+
+impl Tile for PathTile {
+    fn render(&self, width: u16, height: u16) -> Vec<Line<'static>> {
+        let mut lines = Vec::new();
+        let pattern = ".,  .. , .  ,  . ";
+        let pat_len = pattern.len();
+        
+        for y in 0..height {
+            let mut span_content = String::with_capacity(width as usize);
+            for x in 0..width {
+                let idx = (y as usize * 13 + x as usize * 7) % pat_len;
+                let ch = pattern.chars().nth(idx).unwrap_or(' ');
+                span_content.push(ch);
+            }
+            lines.push(Line::from(ratatui::text::Span::styled(
+                span_content,
+                ratatui::style::Style::default().fg(Color::Rgb(139, 69, 19)) // Brown
+            )));
+        }
+        lines
+    }
+}
