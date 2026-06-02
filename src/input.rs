@@ -13,10 +13,18 @@ pub fn handle_event(app: &mut App, tick_rate: Duration) -> io::Result<bool> {
                             KeyCode::Left => app.dispatch_event(crate::models::tabs::TabEvent::Left),
                             KeyCode::Right => app.dispatch_event(crate::models::tabs::TabEvent::Right),
                             KeyCode::Tab => app.next_tab(),
-                            KeyCode::Char(' ') => app.toggle_timer(),
+                            KeyCode::Char(' ') => {
+                                if app.current_tab == crate::models::tabs::Tab::Plants {
+                                    app.plants.toggle_animation();
+                                } else {
+                                    app.toggle_timer();
+                                }
+                            },
                             KeyCode::Char('r') => {
                                 if app.current_tab == crate::models::tabs::Tab::Timer {
                                     app.reset_timer();
+                                } else if app.current_tab == crate::models::tabs::Tab::Plants {
+                                    app.plants.seed = rand::random();
                                 }
                             },
                             KeyCode::Char('f') => {

@@ -30,23 +30,27 @@ pub const SCALES: [Scale; 3] = [
 
 pub struct PlantFrame {
     pub max_scale: usize,
+    pub min_scale: usize,
 }
 
 impl PlantFrame {
-    pub fn new(max_scale: usize) -> Self {
-        Self { max_scale }
+    pub fn new(max_scale: Option<usize>, min_scale: Option<usize>) -> Self {
+        Self {
+            max_scale: max_scale.unwrap_or(0),
+            min_scale: min_scale.unwrap_or(SCALES.len() - 1),
+        }
     }
 
     pub fn get_best_scale(&self, width: u16, height: u16) -> &Scale {
-        // Find the largest scale (lowest index) that fits, starting from max_scale
-        for i in self.max_scale..SCALES.len() {
+        // Find the largest scale (lowest index) that fits, starting from max_scale to min_scale
+        for i in self.max_scale..=self.min_scale {
             let scale = &SCALES[i];
             if width >= scale.min_width && height >= scale.min_height {
                 return scale;
             }
         }
-        // If none fit, return the smallest one
-        &SCALES[SCALES.len() - 1]
+        // If none fit, return the min_scale (smallest allowed)
+        &SCALES[self.min_scale]
     }
 
     pub fn render(

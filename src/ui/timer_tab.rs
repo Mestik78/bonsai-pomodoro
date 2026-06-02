@@ -82,7 +82,7 @@ pub fn render(frame: &mut Frame, app: &App, inner_area: Rect) {
         }
     }
     
-    let plant_frame = bonsai::PlantFrame::new(0);
+    let plant_frame = bonsai::PlantFrame::new(Some(0), None);
     let bonsai_lines = plant_frame.render(&canvas, inner_area.width, inner_area.height, None, None);
     
     let bonsai_p = Paragraph::new(bonsai_lines.clone())

@@ -1,6 +1,7 @@
 pub mod timer_tab;
 pub mod forest_tab;
 pub mod stats_tab;
+pub mod plants_tab;
 pub mod post_timer;
 
 use ratatui::{
@@ -31,6 +32,7 @@ pub fn render(frame: &mut Frame, app: &mut App) {
         Tab::Timer => 0,
         Tab::Forest => 1,
         Tab::Stats => 2,
+        Tab::Plants => 3,
     };
 
     let tabs = Tabs::new(titles)
@@ -58,5 +60,6 @@ pub fn render(frame: &mut Frame, app: &mut App) {
         Tab::Timer => timer_tab::render(frame, app, inner_area),
         Tab::Forest => forest_tab::render(frame, app, inner_area),
         Tab::Stats => stats_tab::render(frame, app, inner_area),
+        Tab::Plants => plants_tab::render(frame, app, inner_area),
     }
 }

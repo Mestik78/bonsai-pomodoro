@@ -53,7 +53,7 @@ pub fn render(frame: &mut Frame, app: &App, inner_area: Rect, title: &str, descr
     let plant = crate::models::plant::Plant::new(seed, active_timer.plant_type.clone(), progress);
     let canvas = crate::models::plant::generate_plant(&plant);
     
-    let plant_frame = crate::bonsai::PlantFrame::new(0);
+    let plant_frame = crate::bonsai::PlantFrame::new(Some(0), None);
     let bonsai_lines = plant_frame.render(&canvas, horiz_chunks[1].width, horiz_chunks[1].height, None, None);
     
     let bonsai_p = Paragraph::new(bonsai_lines.clone())

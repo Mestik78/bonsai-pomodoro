@@ -3,22 +3,37 @@ pub enum Tab {
     Timer,
     Forest,
     Stats,
+    Plants,
 }
 
 impl Tab {
-    pub fn next(&self) -> Self {
+    pub fn next(&self, is_production: bool) -> Self {
         match self {
             Tab::Timer => Tab::Forest,
             Tab::Forest => Tab::Stats,
-            Tab::Stats => Tab::Timer,
+            Tab::Stats => {
+                if is_production {
+                    Tab::Timer
+                } else {
+                    Tab::Plants
+                }
+            },
+            Tab::Plants => Tab::Timer,
         }
     }
 
-    pub fn previous(&self) -> Self {
+    pub fn previous(&self, is_production: bool) -> Self {
         match self {
-            Tab::Timer => Tab::Stats,
+            Tab::Timer => {
+                if is_production {
+                    Tab::Stats
+                } else {
+                    Tab::Plants
+                }
+            },
             Tab::Forest => Tab::Timer,
             Tab::Stats => Tab::Forest,
+            Tab::Plants => Tab::Stats,
         }
     }
 }

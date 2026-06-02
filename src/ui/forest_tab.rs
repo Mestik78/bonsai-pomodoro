@@ -99,7 +99,7 @@ pub fn render(frame: &mut Frame, app: &mut App, inner_area: Rect) {
             let is_bonsai_selected = is_selected && app.forest.level == ForestLevel::Bonsai && t_idx == app.forest.selected_bonsai;
             let pot_color = if is_bonsai_selected { Some(Color::Yellow) } else { None };
             
-            let plant_frame = bonsai::PlantFrame::new(1); // Max scale 0.5 (index 1)
+            let plant_frame = bonsai::PlantFrame::new(Some(1), None); // Max scale 0.5 (index 1)
             let mini_lines = plant_frame.render(&mini_canvas, available_width as u16, target_tree_height as u16, Some(duration_str), pot_color);
             
             let mut block_lines = Vec::new();
@@ -217,7 +217,7 @@ pub fn render(frame: &mut Frame, app: &mut App, inner_area: Rect) {
                     let plant = crate::models::plant::Plant::new(selected_bonsai.seed, selected_bonsai.plant_type.clone(), progress);
                     let canvas = crate::models::plant::generate_plant(&plant);
                     
-                    let plant_frame = bonsai::PlantFrame::new(0);
+                    let plant_frame = bonsai::PlantFrame::new(Some(0), None);
                     let bonsai_lines = plant_frame.render(&canvas, details_area.width, details_area.height, Some(duration_str.clone()), None);
                     
                     let bonsai_height = bonsai_lines.len() as u16;

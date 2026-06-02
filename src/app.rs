@@ -2,6 +2,7 @@ use std::time::Instant;
 
 use crate::models::forest::ForestState;
 use crate::models::stats::StatsState;
+use crate::models::plants::PlantsState;
 use crate::models::tabs::Tab;
 
 #[derive(PartialEq)]
@@ -27,6 +28,7 @@ pub struct App {
     pub is_production: bool,
     pub forest: ForestState,
     pub stats: StatsState,
+    pub plants: PlantsState,
 }
 
 impl App {
@@ -60,17 +62,24 @@ impl App {
         }
 
         let stats = StatsState::new();
+        let plants = PlantsState::new();
+
+        let mut tab_titles = vec!["Timer", "Forest", "Stats"];
+        if !is_production {
+            tab_titles.push("Plants");
+        }
 
         Self {
             current_tab: Tab::Timer,
             should_quit: false,
-            tab_titles: vec!["Timer", "Forest", "Stats"],
+            tab_titles,
             timers,
             last_tick: Instant::now(),
             mode: AppMode::Normal,
             is_production,
             forest,
             stats,
+            plants,
         }
     }
 
@@ -123,6 +132,7 @@ impl App {
     }
 
     pub fn on_tick(&mut self) {
+        self.plants.tick();
         if self.timers[0].tick(&mut self.last_tick) {
             self.mode = AppMode::PostTimerInput {
                 title: String::new(),
@@ -135,11 +145,11 @@ impl App {
     }
 
     pub fn next_tab(&mut self) {
-        self.current_tab = self.current_tab.next();
+        self.current_tab = self.current_tab.next(self.is_production);
     }
 
     pub fn previous_tab(&mut self) {
-        self.current_tab = self.current_tab.previous();
+        self.current_tab = self.current_tab.previous(self.is_production);
     }
 
     pub fn quit(&mut self) {
@@ -235,6 +245,7 @@ impl App {
             Tab::Timer => self.handle_timer_event(&event),
             Tab::Forest => self.forest.handle_event(&event, &self.timers),
             Tab::Stats => self.stats.handle_event(&event),
+            Tab::Plants => self.plants.handle_event(&event),
         };
 
         if let EventResult::Ignored = result {
