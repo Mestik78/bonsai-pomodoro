@@ -268,4 +268,13 @@ impl BonsaiCanvas {
     pub fn render_small(&self, label: Option<String>, pot_color: Option<Color>) -> Vec<ratatui::text::Line<'static>> {
         self.render(0.25, label, pot_color)
     }
+
+    pub fn render_micro(&self, _label: Option<String>, _pot_color: Option<Color>) -> Vec<ratatui::text::Line<'static>> {
+        vec![
+            ratatui::text::Line::from(vec![
+                ratatui::text::Span::styled("♣", ratatui::style::Style::default().fg(Color::Green)),
+                ratatui::text::Span::raw(" "),
+            ])
+        ]
+    }
 }

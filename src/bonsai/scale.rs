@@ -10,7 +10,7 @@ pub struct Scale {
     pub render_fn: RenderFn,
 }
 
-pub const SCALES: [Scale; 3] = [
+pub const SCALES: [Scale; 4] = [
     Scale {
         min_width: 43,
         min_height: 20,
@@ -25,6 +25,11 @@ pub const SCALES: [Scale; 3] = [
         min_width: 10,
         min_height: 5,
         render_fn: BonsaiCanvas::render_small,
+    },
+    Scale {
+        min_width: 2,
+        min_height: 1,
+        render_fn: BonsaiCanvas::render_micro,
     },
 ];
 

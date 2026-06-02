@@ -25,6 +25,7 @@ impl Tilemap {
                 ZoomLevel { tile_width: 43, tile_height: 20 },
                 ZoomLevel { tile_width: 20, tile_height: 10 },
                 ZoomLevel { tile_width: 10, tile_height: 5 },
+                ZoomLevel { tile_width: 2, tile_height: 1 },
             ],
             current_zoom: 1, // Medium
             camera_x: 0,
