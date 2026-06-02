@@ -75,18 +75,24 @@ pub fn render(frame: &mut Frame, app: &App, inner_area: Rect) {
     
     for row in min_row..=max_row {
         for col in start_col..=end_col {
-            let tile_lines = if col == 0 && (row == 0 || row == 1) {
-                let tile = PlantTile {
-                    canvas: &canvas,
-                    frame: plant_frame,
-                    label: None,
-                    pot_color: None,
-                };
-                tile.render(tile_w, tile_h)
-            } else if col % 3 == 0 || row % 3 == 0 {
-                PathTile.render(tile_w, tile_h)
-            } else {
-                EmptyTile.render(tile_w, tile_h)
+            let tile_lines = match state.forest_map.grid.get(&(col, row)).copied() {
+                Some(crate::models::forest_map::MapElement::Plant(idx)) => {
+                    let t = &app.timers[idx];
+                    let canvas = crate::models::plant::generate_plant(&crate::models::plant::Plant::new(t.seed, t.plant_type.clone(), 1.0));
+                    let tile = PlantTile {
+                        canvas: &canvas,
+                        frame: plant_frame.clone(),
+                        label: t.title.clone(),
+                        pot_color: None,
+                    };
+                    tile.render(tile_w, tile_h)
+                },
+                Some(crate::models::forest_map::MapElement::Path) => {
+                    PathTile.render(tile_w, tile_h)
+                },
+                _ => {
+                    EmptyTile.render(tile_w, tile_h)
+                }
             };
             tile_cache.insert((row, col), tile_lines);
         }

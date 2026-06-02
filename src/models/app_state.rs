@@ -3,10 +3,25 @@ use super::timer::TimerSession;
 use std::fs;
 use directories::ProjectDirs;
 
-#[derive(Serialize, Deserialize, Default)]
+#[derive(Serialize, Deserialize)]
 pub struct AppState {
     #[serde(default)]
     pub timers: Vec<TimerSession>,
+    #[serde(default = "default_global_seed")]
+    pub global_seed: u64,
+}
+
+fn default_global_seed() -> u64 {
+    rand::random()
+}
+
+impl Default for AppState {
+    fn default() -> Self {
+        Self {
+            timers: Vec::new(),
+            global_seed: default_global_seed(),
+        }
+    }
 }
 
 impl AppState {

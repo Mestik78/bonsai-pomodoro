@@ -29,6 +29,7 @@ pub struct App {
     pub last_tick: Instant,
     pub mode: AppMode,
     pub is_production: bool,
+    pub global_seed: u64,
     pub history: HistoryState,
     pub forest: ForestState,
     pub stats: StatsState,
@@ -38,6 +39,7 @@ pub struct App {
 impl App {
     pub fn new(is_production: bool) -> Self {
         let state = AppState::load(is_production);
+        let global_seed = state.global_seed;
         let mut timers = state.timers;
 
         let mut need_new = false;
@@ -75,6 +77,9 @@ impl App {
         if !is_production {
             tab_titles.push("Plants");
         }
+        
+        let mut forest = ForestState::new();
+        forest.rebuild_map(&timers, global_seed);
 
         Self {
             current_tab: Tab::Timer,
@@ -86,8 +91,9 @@ impl App {
             last_tick: Instant::now(),
             mode: AppMode::Normal,
             is_production,
+            global_seed,
             history,
-            forest: ForestState::new(),
+            forest,
             stats,
             plants,
         }
@@ -96,6 +102,7 @@ impl App {
     pub fn save_state(&self) {
         let state = AppState {
             timers: self.timers.clone(),
+            global_seed: self.global_seed,
         };
         state.save(self.is_production);
     }
@@ -144,6 +151,7 @@ impl App {
             };
             self.save_state();
             self.history.update_cache(&self.timers);
+            self.forest.rebuild_map(&self.timers, self.global_seed);
         }
     }
 
@@ -157,6 +165,7 @@ impl App {
             };
             self.save_state();
             self.history.update_cache(&self.timers);
+            self.forest.rebuild_map(&self.timers, self.global_seed);
         }
     }
 

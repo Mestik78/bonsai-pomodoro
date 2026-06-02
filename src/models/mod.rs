@@ -8,3 +8,4 @@ pub mod tabs;
 pub mod plants;
 pub mod tile;
 pub mod tilemap;
+pub mod forest_map;

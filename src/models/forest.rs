@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use crate::models::tilemap::Tilemap;
+use crate::models::forest_map::ForestMap;
 use crate::models::tabs::{TabEvent, EventResult};
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -8,6 +9,8 @@ pub struct ForestState {
     pub tilemap: Tilemap,
     #[serde(skip)]
     pub is_moving: bool,
+    #[serde(skip)]
+    pub forest_map: ForestMap,
 }
 
 impl ForestState {
@@ -15,7 +18,12 @@ impl ForestState {
         Self {
             tilemap: Tilemap::new(),
             is_moving: false,
+            forest_map: ForestMap::default(),
         }
+    }
+    
+    pub fn rebuild_map(&mut self, timers: &[crate::models::timer::TimerSession], global_seed: u64) {
+        self.forest_map = ForestMap::build(timers, global_seed);
     }
 
     pub fn handle_event(&mut self, event: &TabEvent) -> EventResult {
