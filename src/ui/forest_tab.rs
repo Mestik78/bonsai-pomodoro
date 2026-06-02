@@ -9,6 +9,7 @@ use ratatui::{
 use crate::app::App;
 use crate::models::timer::TimerSession;
 use crate::models::forest::{ForestLevel, NavDir};
+use crate::bonsai;
 
 
 pub fn render(frame: &mut Frame, app: &mut App, inner_area: Rect) {
@@ -76,9 +77,8 @@ pub fn render(frame: &mut Frame, app: &mut App, inner_area: Rect) {
         
         let mut timer_blocks: Vec<Vec<Line>> = Vec::new();
         
-        let list_zoom = if available_width < 35 { 0.25 } else { 0.5 };
-        let block_width = if list_zoom == 0.25 { 15_usize } else { 25_usize };
-        let target_tree_height = if list_zoom == 0.25 { 7_usize } else { 13_usize };
+        let block_width = if available_width < 35 { 15_usize } else { 25_usize };
+        let target_tree_height = if available_width < 35 { 7_usize } else { 13_usize };
         
         for (t_idx, t) in timers_for_day.iter().enumerate() {
             let _time_str = match chrono::DateTime::parse_from_rfc3339(&t.start_time) {
@@ -98,7 +98,9 @@ pub fn render(frame: &mut Frame, app: &mut App, inner_area: Rect) {
             let mini_canvas = crate::models::plant::generate_plant(&plant);
             let is_bonsai_selected = is_selected && app.forest.level == ForestLevel::Bonsai && t_idx == app.forest.selected_bonsai;
             let pot_color = if is_bonsai_selected { Some(Color::Yellow) } else { None };
-            let mini_lines = mini_canvas.render(list_zoom, Some(duration_str), pot_color);
+            
+            let plant_frame = bonsai::PlantFrame::new(1); // Max scale 0.5 (index 1)
+            let mini_lines = plant_frame.render(&mini_canvas, available_width as u16, target_tree_height as u16, Some(duration_str), pot_color);
             
             let mut block_lines = Vec::new();
             
@@ -215,16 +217,8 @@ pub fn render(frame: &mut Frame, app: &mut App, inner_area: Rect) {
                     let plant = crate::models::plant::Plant::new(selected_bonsai.seed, selected_bonsai.plant_type.clone(), progress);
                     let canvas = crate::models::plant::generate_plant(&plant);
                     
-                    let preview_zoom: f32 = if details_area.width < 20 {
-                        0.25
-                    } else if details_area.width < 40 {
-                        0.5
-                    } else {
-                        1.0
-                    };
-                    let list_zoom_val: f32 = if available_width < 35 { 0.25 } else { 0.5 };
-                    let zoom = preview_zoom.max(list_zoom_val);
-                    let bonsai_lines = canvas.render(zoom, Some(duration_str.clone()), None);
+                    let plant_frame = bonsai::PlantFrame::new(0);
+                    let bonsai_lines = plant_frame.render(&canvas, details_area.width, details_area.height, Some(duration_str.clone()), None);
                     
                     let bonsai_height = bonsai_lines.len() as u16;
                     let bottom_height = bonsai_height + 4;

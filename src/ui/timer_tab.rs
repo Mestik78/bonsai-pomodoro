@@ -82,14 +82,8 @@ pub fn render(frame: &mut Frame, app: &App, inner_area: Rect) {
         }
     }
     
-    let zoom = if inner_area.width < 21 {
-        0.25
-    } else if inner_area.width < 31 {
-        0.5
-    } else {
-        1.0
-    };
-    let bonsai_lines = canvas.render(zoom, None, None);
+    let plant_frame = bonsai::PlantFrame::new(0);
+    let bonsai_lines = plant_frame.render(&canvas, inner_area.width, inner_area.height, None, None);
     
     let bonsai_p = Paragraph::new(bonsai_lines.clone())
         .alignment(Alignment::Center);

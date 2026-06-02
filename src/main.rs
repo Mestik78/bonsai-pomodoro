@@ -40,10 +40,12 @@ fn main() -> io::Result<()> {
 
         let animated = args.contains(&"--animated".to_string());
 
-        let zooms = if let Some(z) = zoom_arg {
-            vec![z]
+        let selected_scales: Vec<&crate::bonsai::Scale> = if let Some(z) = zoom_arg {
+            if z >= 1.0 { vec![&crate::bonsai::SCALES[0]] }
+            else if z >= 0.5 { vec![&crate::bonsai::SCALES[1]] }
+            else { vec![&crate::bonsai::SCALES[2]] }
         } else {
-            vec![1.0, 0.5, 0.25]
+            crate::bonsai::SCALES.iter().collect()
         };
             
         let plant_types = vec![
@@ -57,7 +59,7 @@ fn main() -> io::Result<()> {
         for p_type in &plant_types {
             let plant = crate::models::plant::Plant::new(seed, p_type.clone(), 1.0);
             let canvas = crate::models::plant::generate_plant(&plant);
-            let h = canvas.render(1.0, None, None).len();
+            let h = canvas.render_full(None, None).len();
             if h > global_max_height {
                 global_max_height = h;
             }
@@ -86,8 +88,8 @@ fn main() -> io::Result<()> {
                 let plant = crate::models::plant::Plant::new(seed, p_type.clone(), visual_progress);
                 let canvas = crate::models::plant::generate_plant(&plant);
                 let mut all_renders = Vec::new();
-                for &z in &zooms {
-                    all_renders.push(canvas.render(z, None, None));
+                for scale in &selected_scales {
+                    all_renders.push((scale.render_fn)(&canvas, None, None));
                 }
 
                 // Usamos la altura máxima global precalculada para que la maceta no se mueva

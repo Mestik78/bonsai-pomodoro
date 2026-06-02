@@ -227,4 +227,16 @@ impl BonsaiCanvas {
         
         lines
     }
+
+    pub fn render_full(&self, label: Option<String>, pot_color: Option<Color>) -> Vec<ratatui::text::Line<'static>> {
+        self.render(1.0, label, pot_color)
+    }
+
+    pub fn render_medium(&self, label: Option<String>, pot_color: Option<Color>) -> Vec<ratatui::text::Line<'static>> {
+        self.render(0.5, label, pot_color)
+    }
+
+    pub fn render_small(&self, label: Option<String>, pot_color: Option<Color>) -> Vec<ratatui::text::Line<'static>> {
+        self.render(0.25, label, pot_color)
+    }
 }
