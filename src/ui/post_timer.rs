@@ -45,12 +45,7 @@ pub fn render(frame: &mut Frame, app: &App, inner_area: Rect, title: &str, descr
     
     // Draw Bonsai in right half
     let active_timer = app.active_timer();
-    let seed = active_timer.get_seed();
-    let actual = active_timer.actual_runtime.unwrap_or(active_timer.duration);
-    let d = (actual as f64).max(0.0);
-    let x = (d / 3000.0).clamp(0.0, 1.0);
-    let progress = (x * x * (3.0 - 2.0 * x)) as f32;
-    let plant = crate::models::plant::Plant::new(seed, active_timer.plant_type.clone(), progress);
+    let plant = crate::models::plant::Plant::from_timer(active_timer);
     let canvas = crate::models::plant::generate_plant(&plant);
     
     let plant_frame = crate::bonsai::PlantFrame::new(Some(0), None);

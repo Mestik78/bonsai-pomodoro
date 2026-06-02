@@ -129,7 +129,7 @@ impl App {
         let selected_idx = self.timer_plant_list_state.selected().unwrap_or(0);
         let selected_plant = crate::models::plant::PlantType::all()[selected_idx].clone();
         self.timers[0].plant_type = selected_plant;
-        self.timers[0].seed = Some(rand::random());
+        self.timers[0].seed = rand::random();
     }
 
     pub fn finish_early(&mut self) {
@@ -257,7 +257,7 @@ impl App {
                     
                     if self.timers[0].state == Some(crate::models::timer::TimerState::New) {
                         self.timers[0].plant_type = crate::models::plant::PlantType::all()[i].clone();
-                        self.timers[0].seed = Some(rand::random());
+                        self.timers[0].seed = rand::random();
                     }
                 }
                 EventResult::Consumed
@@ -278,7 +278,7 @@ impl App {
                     
                     if self.timers[0].state == Some(crate::models::timer::TimerState::New) {
                         self.timers[0].plant_type = crate::models::plant::PlantType::all()[i].clone();
-                        self.timers[0].seed = Some(rand::random());
+                        self.timers[0].seed = rand::random();
                     }
                 }
                 EventResult::Consumed

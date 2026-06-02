@@ -56,19 +56,10 @@ pub fn render(frame: &mut Frame, app: &App, inner_area: Rect) {
     };
 
     // 1. Draw Bonsai Fullscreen
-    let seed = active_timer.get_seed();
-    let progress = if app.is_selecting_plant {
-        1.0
-    } else if active_timer.state == Some(TimerState::New) || matches!(active_timer.state, Some(TimerState::Starting(_))) {
-        0.0
-    } else {
-        let actual = active_timer.duration.saturating_sub(time_to_show);
-        let d = (actual as f64).max(0.0);
-        let x = (d / 3000.0).clamp(0.0, 1.0);
-        (x * x * (3.0 - 2.0 * x)) as f32
-    };
-    
-    let plant = crate::models::plant::Plant::new(seed, active_timer.plant_type.clone(), progress);
+    let mut plant = crate::models::plant::Plant::from_timer(active_timer);
+    if app.is_selecting_plant {
+        plant.progress = 1.0;
+    }
     let mut canvas = crate::models::plant::generate_plant(&plant);
     
     if let Some(TimerState::Starting(ref start_time_str)) = active_timer.state {

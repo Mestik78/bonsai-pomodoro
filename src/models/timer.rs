@@ -10,38 +10,83 @@ pub enum TimerState {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
+#[serde(from = "TimerSessionData", into = "TimerSessionData")]
 pub struct TimerSession {
-    #[serde(rename = "start-time")]
     pub start_time: String,
-    
     pub duration: u64,
-    
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub state: Option<TimerState>,
-    
-    #[serde(rename = "time-left")]
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub time_left: Option<u64>,
-
-    #[serde(rename = "actual-runtime", skip_serializing_if = "Option::is_none")]
     pub actual_runtime: Option<u64>,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub title: Option<String>,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
-
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub seed: Option<u64>,
-
-    #[serde(default)]
+    pub seed: u64,
     pub plant_type: PlantType,
+}
+
+#[derive(Serialize, Deserialize)]
+struct TimerSessionData {
+    #[serde(rename = "start-time")]
+    start_time: String,
+    duration: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    state: Option<TimerState>,
+    #[serde(rename = "time-left", skip_serializing_if = "Option::is_none")]
+    time_left: Option<u64>,
+    #[serde(rename = "actual-runtime", skip_serializing_if = "Option::is_none")]
+    actual_runtime: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    title: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    description: Option<String>,
+    #[serde(default, skip_serializing)]
+    seed: Option<u64>,
+    #[serde(default)]
+    plant_type: PlantType,
+}
+
+impl From<TimerSessionData> for TimerSession {
+    fn from(data: TimerSessionData) -> Self {
+        let seed = if let Some(s) = data.seed {
+            s
+        } else {
+            use std::hash::{Hash, Hasher};
+            let mut hasher = std::collections::hash_map::DefaultHasher::new();
+            data.start_time.hash(&mut hasher);
+            hasher.finish()
+        };
+        Self {
+            start_time: data.start_time,
+            duration: data.duration,
+            state: data.state,
+            time_left: data.time_left,
+            actual_runtime: data.actual_runtime,
+            title: data.title,
+            description: data.description,
+            seed,
+            plant_type: data.plant_type,
+        }
+    }
+}
+
+impl Into<TimerSessionData> for TimerSession {
+    fn into(self) -> TimerSessionData {
+        TimerSessionData {
+            start_time: self.start_time,
+            duration: self.duration,
+            state: self.state,
+            time_left: self.time_left,
+            actual_runtime: self.actual_runtime,
+            title: self.title,
+            description: self.description,
+            seed: Some(self.seed),
+            plant_type: self.plant_type,
+        }
+    }
 }
 
 impl TimerSession {
     pub fn new(duration: u64, plant_type: PlantType) -> Self {
-        Self {
+        let mut t = Self {
             start_time: chrono::Utc::now().to_rfc3339(),
             duration,
             state: Some(TimerState::New),
@@ -49,20 +94,34 @@ impl TimerSession {
             actual_runtime: None,
             title: None,
             description: None,
-            seed: None,
+            seed: 0,
             plant_type,
-        }
-    }
-
-    pub fn get_seed(&self) -> u64 {
-        if let Some(s) = self.seed {
-            s
-        } else {
+        };
+        
+        let hash_seed = {
             use std::hash::{Hash, Hasher};
             let mut hasher = std::collections::hash_map::DefaultHasher::new();
-            self.start_time.hash(&mut hasher);
+            t.start_time.hash(&mut hasher);
             hasher.finish()
+        };
+        t.seed = hash_seed;
+        t
+    }
+
+    pub fn progress(&self) -> f32 {
+        if self.state == Some(TimerState::New) || matches!(self.state, Some(TimerState::Starting(_))) {
+            return 0.0;
         }
+        
+        let actual = if self.state.is_none() {
+            self.actual_runtime.unwrap_or(self.duration)
+        } else {
+            self.duration.saturating_sub(self.time_left.unwrap_or(self.duration))
+        };
+        
+        let d = (actual as f64).max(0.0);
+        let x = (d / 3000.0).clamp(0.0, 1.0);
+        (x * x * (3.0 - 2.0 * x)) as f32
     }
 
     pub fn toggle(&mut self, last_tick: &mut std::time::Instant) {
@@ -142,7 +201,6 @@ impl TimerSession {
                 let now = chrono::Utc::now();
                 if now.signed_duration_since(start_time).num_milliseconds() >= 500 {
                     self.state = Some(TimerState::Running);
-                    self.start_time = now.to_rfc3339();
                     *last_tick = std::time::Instant::now();
                 }
             }

@@ -53,6 +53,14 @@ impl Plant {
     pub fn new(seed: u64, plant_type: PlantType, progress: f32) -> Self {
         Self { seed, plant_type, progress }
     }
+
+    pub fn from_timer(timer: &crate::models::timer::TimerSession) -> Self {
+        Self {
+            seed: timer.seed,
+            plant_type: timer.plant_type.clone(),
+            progress: timer.progress(),
+        }
+    }
 }
 
 pub fn generate_plant(plant: &Plant) -> bonsai::canvas::BonsaiCanvas {
