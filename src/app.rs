@@ -1,6 +1,6 @@
 use std::time::Instant;
 
-use crate::models::forest::ForestState;
+use crate::models::history::HistoryState;
 use crate::models::stats::StatsState;
 use crate::models::plants::PlantsState;
 use crate::models::tabs::Tab;
@@ -28,7 +28,7 @@ pub struct App {
     pub last_tick: Instant,
     pub mode: AppMode,
     pub is_production: bool,
-    pub forest: ForestState,
+    pub history: HistoryState,
     pub stats: StatsState,
     pub plants: PlantsState,
 }
@@ -56,11 +56,11 @@ impl App {
         }
 
         let finished_count = timers.iter().filter(|t| t.state.is_none()).count();
-        let mut forest = ForestState::new();
-        forest.update_cache(&timers);
+        let mut history = HistoryState::new();
+        history.update_cache(&timers);
         if finished_count > 0 {
-            forest.list_state.select(Some(0));
-            forest.selected_day = 0;
+            history.list_state.select(Some(0));
+            history.selected_day = 0;
         }
 
         let stats = StatsState::new();
@@ -69,7 +69,7 @@ impl App {
         let mut timer_plant_list_state = ratatui::widgets::ListState::default();
         timer_plant_list_state.select(Some(0));
 
-        let mut tab_titles = vec!["Timer", "Forest", "Stats"];
+        let mut tab_titles = vec!["Timer", "History", "Stats"];
         if !is_production {
             tab_titles.push("Plants");
         }
@@ -84,7 +84,7 @@ impl App {
             last_tick: Instant::now(),
             mode: AppMode::Normal,
             is_production,
-            forest,
+            history,
             stats,
             plants,
         }
@@ -140,7 +140,7 @@ impl App {
                 focus: 0,
             };
             self.save_state();
-            self.forest.update_cache(&self.timers);
+            self.history.update_cache(&self.timers);
         }
     }
 
@@ -153,7 +153,7 @@ impl App {
                 focus: 0,
             };
             self.save_state();
-            self.forest.update_cache(&self.timers);
+            self.history.update_cache(&self.timers);
         }
     }
 
@@ -291,7 +291,7 @@ impl App {
         use crate::models::tabs::{Tab, EventResult};
         let result = match self.current_tab {
             Tab::Timer => self.handle_timer_event(&event),
-            Tab::Forest => self.forest.handle_event(&event, &self.timers),
+            Tab::History => self.history.handle_event(&event, &self.timers),
             Tab::Stats => self.stats.handle_event(&event),
             Tab::Plants => self.plants.handle_event(&event),
         };

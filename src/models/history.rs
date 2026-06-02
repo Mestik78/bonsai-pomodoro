@@ -3,7 +3,7 @@ use crate::models::timer::TimerSession;
 use crate::models::tabs::{TabEvent, EventResult};
 
 #[derive(PartialEq)]
-pub enum ForestLevel {
+pub enum HistoryLevel {
     Day,
     Bonsai,
 }
@@ -14,9 +14,9 @@ pub enum NavDir {
     Down,
 }
 
-pub struct ForestState {
+pub struct HistoryState {
     pub list_state: ListState,
-    pub level: ForestLevel,
+    pub level: HistoryLevel,
     pub selected_day: usize,
     pub selected_bonsai: usize,
     pub cols: usize,
@@ -24,11 +24,11 @@ pub struct ForestState {
     pub cached_days: Vec<String>,
 }
 
-impl ForestState {
+impl HistoryState {
     pub fn new() -> Self {
         Self {
             list_state: ListState::default(),
-            level: ForestLevel::Day,
+            level: HistoryLevel::Day,
             selected_day: 0,
             selected_bonsai: 0,
             cols: 1,
@@ -40,7 +40,7 @@ impl ForestState {
     pub fn handle_event(&mut self, event: &TabEvent, timers: &[TimerSession]) -> EventResult {
         match event {
             TabEvent::Up { .. } => {
-                if self.level == ForestLevel::Bonsai {
+                if self.level == HistoryLevel::Bonsai {
                     self.nav_up(timers);
                 } else {
                     self.previous();
@@ -48,7 +48,7 @@ impl ForestState {
                 EventResult::Consumed
             },
             TabEvent::Down { .. } => {
-                if self.level == ForestLevel::Bonsai {
+                if self.level == HistoryLevel::Bonsai {
                     self.nav_down(timers);
                 } else {
                     self.next();
@@ -56,7 +56,7 @@ impl ForestState {
                 EventResult::Consumed
             },
             TabEvent::Left => {
-                if self.level == ForestLevel::Bonsai {
+                if self.level == HistoryLevel::Bonsai {
                     self.nav_left(timers);
                     EventResult::Consumed
                 } else {
@@ -64,7 +64,7 @@ impl ForestState {
                 }
             },
             TabEvent::Right => {
-                if self.level == ForestLevel::Bonsai {
+                if self.level == HistoryLevel::Bonsai {
                     self.nav_right(timers);
                     EventResult::Consumed
                 } else {
@@ -126,12 +126,12 @@ impl ForestState {
 
     pub fn enter(&mut self) {
         if self.cached_days.is_empty() { return; }
-        self.level = ForestLevel::Bonsai;
+        self.level = HistoryLevel::Bonsai;
         self.selected_bonsai = 0;
     }
 
     pub fn escape(&mut self) {
-        self.level = ForestLevel::Day;
+        self.level = HistoryLevel::Day;
     }
 
     pub fn get_bonsai_count_for_selected_day(&self, timers: &[TimerSession]) -> usize {
@@ -151,7 +151,7 @@ impl ForestState {
     }
 
     pub fn nav_left(&mut self, timers: &[TimerSession]) {
-        if self.level != ForestLevel::Bonsai { return; }
+        if self.level != HistoryLevel::Bonsai { return; }
         let count = self.get_bonsai_count_for_selected_day(timers);
         if count == 0 { return; }
         self.last_nav_dir = NavDir::Up;
@@ -165,7 +165,7 @@ impl ForestState {
     }
 
     pub fn nav_right(&mut self, timers: &[TimerSession]) {
-        if self.level != ForestLevel::Bonsai { return; }
+        if self.level != HistoryLevel::Bonsai { return; }
         let count = self.get_bonsai_count_for_selected_day(timers);
         if count == 0 { return; }
         self.last_nav_dir = NavDir::Down;
@@ -178,7 +178,7 @@ impl ForestState {
     }
 
     pub fn nav_up(&mut self, timers: &[TimerSession]) {
-        if self.level != ForestLevel::Bonsai { return; }
+        if self.level != HistoryLevel::Bonsai { return; }
         let count = self.get_bonsai_count_for_selected_day(timers);
         if count == 0 { return; }
         self.last_nav_dir = NavDir::Up;
@@ -205,7 +205,7 @@ impl ForestState {
     }
 
     pub fn nav_down(&mut self, timers: &[TimerSession]) {
-        if self.level != ForestLevel::Bonsai { return; }
+        if self.level != HistoryLevel::Bonsai { return; }
         let count = self.get_bonsai_count_for_selected_day(timers);
         if count == 0 { return; }
         self.last_nav_dir = NavDir::Down;

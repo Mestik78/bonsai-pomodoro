@@ -8,7 +8,7 @@ use ratatui::{
 
 use crate::app::App;
 use crate::models::timer::TimerSession;
-use crate::models::forest::{ForestLevel, NavDir};
+use crate::models::history::{HistoryLevel, NavDir};
 use crate::bonsai;
 
 
@@ -22,7 +22,7 @@ pub fn render(frame: &mut Frame, app: &mut App, inner_area: Rect) {
         return;
     }
 
-    let days_order = &app.forest.cached_days;
+    let days_order = &app.history.cached_days;
     let mut days_map: std::collections::HashMap<String, Vec<&TimerSession>> = std::collections::HashMap::new();
     
     for t in finished_timers {
@@ -36,13 +36,13 @@ pub fn render(frame: &mut Frame, app: &mut App, inner_area: Rect) {
         days_map.get_mut(&date_str).unwrap().push(t);
     }
     
-    let selected_idx = app.forest.selected_day;
+    let selected_idx = app.history.selected_day;
     
     let mut items = Vec::new();
     let mut target_line_idx = 0;
     let mut current_line: usize = 0;
     
-    let available_width = if app.forest.level == ForestLevel::Bonsai {
+    let available_width = if app.history.level == HistoryLevel::Bonsai {
         let prev_width = 20.max((inner_area.width as f32 * 0.45) as u16);
         inner_area.width.saturating_sub(prev_width) as usize
     } else {
@@ -93,7 +93,7 @@ pub fn render(frame: &mut Frame, app: &mut App, inner_area: Rect) {
             
             let plant = crate::models::plant::Plant::from_timer(t);
             let mini_canvas = crate::models::plant::generate_plant(&plant);
-            let is_bonsai_selected = is_selected && app.forest.level == ForestLevel::Bonsai && t_idx == app.forest.selected_bonsai;
+            let is_bonsai_selected = is_selected && app.history.level == HistoryLevel::Bonsai && t_idx == app.history.selected_bonsai;
             let pot_color = if is_bonsai_selected { Some(Color::Yellow) } else { None };
             
             let plant_frame = bonsai::PlantFrame::new(Some(1), None); // Max scale 0.5 (index 1)
@@ -116,16 +116,16 @@ pub fn render(frame: &mut Frame, app: &mut App, inner_area: Rect) {
         let cols = (available_width as usize / block_width).max(1);
         
         if is_selected {
-            app.forest.cols = cols;
+            app.history.cols = cols;
         }
         
         for (row_idx, row_chunk) in timer_blocks.chunks(cols).enumerate() {
-            if is_selected && app.forest.level == ForestLevel::Bonsai {
-                let selected_row = app.forest.selected_bonsai / cols;
+            if is_selected && app.history.level == HistoryLevel::Bonsai {
+                let selected_row = app.history.selected_bonsai / cols;
                 if row_idx == selected_row {
                     let list_height = inner_area.height as usize;
                     if selected_row == 0 {
-                        if app.forest.last_nav_dir == NavDir::Down {
+                        if app.history.last_nav_dir == NavDir::Down {
                             let block_height = current_line - day_start_line;
                             if block_height <= list_height {
                                 target_line_idx = current_line.saturating_sub(1);
@@ -135,7 +135,7 @@ pub fn render(frame: &mut Frame, app: &mut App, inner_area: Rect) {
                         } else {
                             target_line_idx = day_start_line;
                         }
-                    } else if app.forest.last_nav_dir == NavDir::Down {
+                    } else if app.history.last_nav_dir == NavDir::Down {
                         target_line_idx = current_line + max_height.saturating_sub(1);
                     } else {
                         target_line_idx = current_line;
@@ -166,9 +166,9 @@ pub fn render(frame: &mut Frame, app: &mut App, inner_area: Rect) {
             current_line += 1;
         }
         
-        if is_selected && app.forest.level == ForestLevel::Day {
+        if is_selected && app.history.level == HistoryLevel::Day {
             let list_height = inner_area.height as usize;
-            if app.forest.last_nav_dir == NavDir::Down {
+            if app.history.last_nav_dir == NavDir::Down {
                 let day_height = current_line - day_start_line;
                 if day_height <= list_height {
                     target_line_idx = current_line.saturating_sub(1);
@@ -181,12 +181,12 @@ pub fn render(frame: &mut Frame, app: &mut App, inner_area: Rect) {
         }
     }
     
-    app.forest.list_state.select(Some(target_line_idx));
+    app.history.list_state.select(Some(target_line_idx));
     let list = List::new(items)
         .block(Block::default())
         .style(Style::default().fg(Color::White));
         
-    if app.forest.level == ForestLevel::Bonsai {
+    if app.history.level == HistoryLevel::Bonsai {
         let prev_width = 20.max((inner_area.width as f32 * 0.45) as u16);
         let list_width = inner_area.width.saturating_sub(prev_width);
         
@@ -195,7 +195,7 @@ pub fn render(frame: &mut Frame, app: &mut App, inner_area: Rect) {
             .constraints([Constraint::Length(list_width), Constraint::Length(prev_width)])
             .split(inner_area);
             
-        frame.render_stateful_widget(list, chunks[0], &mut app.forest.list_state);
+        frame.render_stateful_widget(list, chunks[0], &mut app.history.list_state);
         
         let details_block = Block::default()
             .borders(Borders::LEFT)
@@ -207,8 +207,8 @@ pub fn render(frame: &mut Frame, app: &mut App, inner_area: Rect) {
         if selected_idx < days_order.len() {
             let selected_day_str = &days_order[selected_idx];
             if let Some(timers_for_day) = days_map.get(selected_day_str) {
-                if app.forest.selected_bonsai < timers_for_day.len() {
-                    let selected_bonsai = timers_for_day[app.forest.selected_bonsai];
+                if app.history.selected_bonsai < timers_for_day.len() {
+                    let selected_bonsai = timers_for_day[app.history.selected_bonsai];
                     
                     let title = selected_bonsai.title.as_deref().unwrap_or("Untitled");
                     let desc = selected_bonsai.description.as_deref().unwrap_or("");
@@ -270,6 +270,6 @@ pub fn render(frame: &mut Frame, app: &mut App, inner_area: Rect) {
             }
         }
     } else {
-        frame.render_stateful_widget(list, inner_area, &mut app.forest.list_state);
+        frame.render_stateful_widget(list, inner_area, &mut app.history.list_state);
     }
 }

@@ -1,5 +1,5 @@
 pub mod timer_tab;
-pub mod forest_tab;
+pub mod history_tab;
 pub mod stats_tab;
 pub mod plants_tab;
 pub mod post_timer;
@@ -27,7 +27,7 @@ pub fn render(frame: &mut Frame, app: &mut App) {
 
     let tab_index = match app.current_tab {
         Tab::Timer => 0,
-        Tab::Forest => 1,
+        Tab::History => 1,
         Tab::Stats => 2,
         Tab::Plants => 3,
     };
@@ -77,7 +77,7 @@ pub fn render(frame: &mut Frame, app: &mut App) {
 
     match app.current_tab {
         Tab::Timer => timer_tab::render(frame, app, inner_area),
-        Tab::Forest => forest_tab::render(frame, app, inner_area),
+        Tab::History => history_tab::render(frame, app, inner_area),
         Tab::Stats => stats_tab::render(frame, app, inner_area),
         Tab::Plants => plants_tab::render(frame, app, inner_area),
     }

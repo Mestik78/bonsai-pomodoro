@@ -1,7 +1,7 @@
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Tab {
     Timer,
-    Forest,
+    History,
     Stats,
     Plants,
 }
@@ -9,8 +9,8 @@ pub enum Tab {
 impl Tab {
     pub fn next(&self, is_production: bool) -> Self {
         match self {
-            Tab::Timer => Tab::Forest,
-            Tab::Forest => Tab::Stats,
+            Tab::Timer => Tab::History,
+            Tab::History => Tab::Stats,
             Tab::Stats => {
                 if is_production {
                     Tab::Timer
@@ -31,8 +31,8 @@ impl Tab {
                     Tab::Plants
                 }
             },
-            Tab::Forest => Tab::Timer,
-            Tab::Stats => Tab::Forest,
+            Tab::History => Tab::Timer,
+            Tab::Stats => Tab::History,
             Tab::Plants => Tab::Stats,
         }
     }
