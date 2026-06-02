@@ -6,7 +6,7 @@ use ratatui::{
 };
 
 use crate::app::App;
-use crate::bonsai;
+
 
 pub fn render(frame: &mut Frame, app: &App, inner_area: Rect, title: &str, description: &str, focus: u8) {
     let horiz_chunks = Layout::default()
@@ -50,7 +50,8 @@ pub fn render(frame: &mut Frame, app: &App, inner_area: Rect, title: &str, descr
     let d = (actual as f64).max(0.0);
     let x = (d / 3000.0).clamp(0.0, 1.0);
     let progress = (x * x * (3.0 - 2.0 * x)) as f32;
-    let canvas = bonsai::generate_bonsai(seed, progress);
+    let plant = crate::models::plant::Plant::new(seed, active_timer.plant_type.clone(), progress);
+    let canvas = crate::models::plant::generate_plant(&plant);
     
     let zoom = if inner_area.width < 21 {
         0.25

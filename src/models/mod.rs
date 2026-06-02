@@ -3,3 +3,4 @@ pub mod app_state;
 pub mod forest;
 pub mod stats;
 pub mod tabs;
+pub mod plant;

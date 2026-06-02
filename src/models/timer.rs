@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use crate::models::plant::PlantType;
 
 #[derive(Serialize, Deserialize, Clone, PartialEq)]
 pub enum TimerState {
@@ -32,6 +33,9 @@ pub struct TimerSession {
     pub description: Option<String>,
 
     pub seed: u64,
+
+    #[serde(default)]
+    pub plant_type: PlantType,
 }
 
 impl TimerSession {
@@ -45,6 +49,7 @@ impl TimerSession {
             title: None,
             description: None,
             seed: rand::random(),
+            plant_type: PlantType::Bonsai,
         }
     }
 

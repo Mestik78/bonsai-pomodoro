@@ -66,7 +66,8 @@ pub fn render(frame: &mut Frame, app: &App, inner_area: Rect) {
         (x * x * (3.0 - 2.0 * x)) as f32
     };
     
-    let mut canvas = bonsai::generate_bonsai(seed, progress);
+    let plant = crate::models::plant::Plant::new(seed, active_timer.plant_type.clone(), progress);
+    let mut canvas = crate::models::plant::generate_plant(&plant);
     
     if let Some(TimerState::Starting(ref start_time_str)) = active_timer.state {
         if let Ok(start_time) = chrono::DateTime::parse_from_rfc3339(start_time_str) {

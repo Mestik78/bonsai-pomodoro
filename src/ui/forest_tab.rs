@@ -9,7 +9,7 @@ use ratatui::{
 use crate::app::App;
 use crate::models::timer::TimerSession;
 use crate::models::forest::{ForestLevel, NavDir};
-use crate::bonsai;
+
 
 pub fn render(frame: &mut Frame, app: &mut App, inner_area: Rect) {
     let finished_timers: Vec<&TimerSession> = app.timers.iter().filter(|t| t.state.is_none()).collect();
@@ -94,7 +94,8 @@ pub fn render(frame: &mut Frame, app: &mut App, inner_area: Rect) {
             let d = (duration as f64).max(0.0);
             let x = (d / 3000.0).clamp(0.0, 1.0);
             let progress = (x * x * (3.0 - 2.0 * x)) as f32;
-            let mini_canvas = bonsai::generate_bonsai(t.seed, progress);
+            let plant = crate::models::plant::Plant::new(t.seed, t.plant_type.clone(), progress);
+            let mini_canvas = crate::models::plant::generate_plant(&plant);
             let is_bonsai_selected = is_selected && app.forest.level == ForestLevel::Bonsai && t_idx == app.forest.selected_bonsai;
             let pot_color = if is_bonsai_selected { Some(Color::Yellow) } else { None };
             let mini_lines = mini_canvas.render(list_zoom, Some(duration_str), pot_color);
@@ -211,7 +212,8 @@ pub fn render(frame: &mut Frame, app: &mut App, inner_area: Rect) {
                     let d = (duration as f64).max(0.0);
                     let x = (d / 3000.0).clamp(0.0, 1.0);
                     let progress = (x * x * (3.0 - 2.0 * x)) as f32;
-                    let canvas = bonsai::generate_bonsai(selected_bonsai.seed, progress);
+                    let plant = crate::models::plant::Plant::new(selected_bonsai.seed, selected_bonsai.plant_type.clone(), progress);
+                    let canvas = crate::models::plant::generate_plant(&plant);
                     
                     let preview_zoom: f32 = if details_area.width < 20 {
                         0.25

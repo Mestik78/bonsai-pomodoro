@@ -44,7 +44,8 @@ fn main() -> io::Result<()> {
             vec![1.0, 0.5, 0.25]
         };
             
-        let canvas = bonsai::generate_bonsai(seed, 1.0);
+        let plant = crate::models::plant::Plant::new(seed, crate::models::plant::PlantType::Bonsai, 1.0);
+        let canvas = crate::models::plant::generate_plant(&plant);
         let mut all_renders = Vec::new();
         for &z in &zooms {
             all_renders.push(canvas.render(z, None, None));
