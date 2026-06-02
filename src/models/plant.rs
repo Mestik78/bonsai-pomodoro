@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Clone, PartialEq)]
 pub enum PlantType {
     Bonsai,
+    Cactus,
 }
 
 impl Default for PlantType {
@@ -27,5 +28,6 @@ impl Plant {
 pub fn generate_plant(plant: &Plant) -> bonsai::canvas::BonsaiCanvas {
     match plant.plant_type {
         PlantType::Bonsai => bonsai::generate_bonsai(plant.seed, plant.progress),
+        PlantType::Cactus => bonsai::generate_cactus(plant.seed, plant.progress),
     }
 }

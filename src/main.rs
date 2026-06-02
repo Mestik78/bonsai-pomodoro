@@ -38,57 +38,105 @@ fn main() -> io::Result<()> {
             .and_then(|i| args.get(i + 1))
             .and_then(|s| s.parse::<f32>().ok());
 
+        let animated = args.contains(&"--animated".to_string());
+
         let zooms = if let Some(z) = zoom_arg {
             vec![z]
         } else {
             vec![1.0, 0.5, 0.25]
         };
             
-        let plant = crate::models::plant::Plant::new(seed, crate::models::plant::PlantType::Bonsai, 1.0);
-        let canvas = crate::models::plant::generate_plant(&plant);
-        let mut all_renders = Vec::new();
-        for &z in &zooms {
-            all_renders.push(canvas.render(z, None, None));
+        let plant_types = vec![
+            crate::models::plant::PlantType::Bonsai,
+            crate::models::plant::PlantType::Cactus,
+        ];
+
+        // Precalcular altura máxima para anclar la maceta
+        let mut global_max_height = 0;
+        for p_type in &plant_types {
+            let plant = crate::models::plant::Plant::new(seed, p_type.clone(), 1.0);
+            let canvas = crate::models::plant::generate_plant(&plant);
+            let h = canvas.render(1.0, None, None).len();
+            if h > global_max_height {
+                global_max_height = h;
+            }
         }
 
-        let max_height = all_renders.iter().map(|r| r.len()).max().unwrap_or(0);
+        let start_time = std::time::Instant::now();
+        let animation_duration = 25.0; // 25 mins a x60 = 25s
 
-        for y in 0..max_height {
-            for (i, lines) in all_renders.iter().enumerate() {
-                let height = lines.len();
-                let width = lines.first()
-                    .map(|l| l.spans.iter().map(|s| s.content.chars().count()).sum::<usize>())
-                    .unwrap_or(0);
-                
-                let pad_top = max_height.saturating_sub(height);
-                
-                if y < pad_top {
-                    print!("{}", " ".repeat(width));
-                } else {
-                    let orig_y = y - pad_top;
-                    if let Some(line) = lines.get(orig_y) {
-                        for span in &line.spans {
-                            if let Some(c) = span.style.fg {
-                                match c {
-                                    ratatui::style::Color::Green | ratatui::style::Color::LightGreen => print!("\x1b[32m"),
-                                    ratatui::style::Color::DarkGray => print!("\x1b[90m"),
-                                    ratatui::style::Color::Rgb(r, g, b) => print!("\x1b[38;2;{};{};{}m", r, g, b),
-                                    _ => print!("\x1b[0m"),
-                                }
-                            }
-                            print!("{}", span.content);
-                            print!("\x1b[0m");
-                        }
-                    } else {
-                        print!("{}", " ".repeat(width));
-                    }
-                }
-                
-                if i < all_renders.len() - 1 {
-                    print!("    "); // 4 espacios de margen entre árboles
-                }
+        loop {
+            let elapsed = start_time.elapsed().as_secs_f32();
+            let progress = if animated {
+                (elapsed / animation_duration).clamp(0.0, 1.0)
+            } else {
+                1.0
+            };
+
+            // Smoothstep
+            let x = progress as f64;
+            let visual_progress = (x * x * (3.0 - 2.0 * x)) as f32;
+
+            if animated {
+                print!("\x1B[2J\x1B[1;1H");
             }
-            println!();
+
+            for p_type in &plant_types {
+                let plant = crate::models::plant::Plant::new(seed, p_type.clone(), visual_progress);
+                let canvas = crate::models::plant::generate_plant(&plant);
+                let mut all_renders = Vec::new();
+                for &z in &zooms {
+                    all_renders.push(canvas.render(z, None, None));
+                }
+
+                // Usamos la altura máxima global precalculada para que la maceta no se mueva
+                let max_height = if animated { global_max_height } else { all_renders.iter().map(|r| r.len()).max().unwrap_or(0) };
+
+                for y in 0..max_height {
+                    for (i, lines) in all_renders.iter().enumerate() {
+                        let height = lines.len();
+                        let width = lines.first()
+                            .map(|l| l.spans.iter().map(|s| s.content.chars().count()).sum::<usize>())
+                            .unwrap_or(0);
+                        
+                        let pad_top = max_height.saturating_sub(height);
+                        
+                        if y < pad_top {
+                            print!("{}", " ".repeat(width));
+                        } else {
+                            let orig_y = y - pad_top;
+                            if let Some(line) = lines.get(orig_y) {
+                                for span in &line.spans {
+                                    if let Some(c) = span.style.fg {
+                                        match c {
+                                            ratatui::style::Color::Green | ratatui::style::Color::LightGreen => print!("\x1b[32m"),
+                                            ratatui::style::Color::DarkGray => print!("\x1b[90m"),
+                                            ratatui::style::Color::Rgb(r, g, b) => print!("\x1b[38;2;{};{};{}m", r, g, b),
+                                            ratatui::style::Color::Red | ratatui::style::Color::LightRed | ratatui::style::Color::Magenta | ratatui::style::Color::Yellow => print!("\x1b[31m"),
+                                            _ => print!("\x1b[0m"),
+                                        }
+                                    }
+                                    print!("{}", span.content);
+                                    print!("\x1b[0m");
+                                }
+                            } else {
+                                print!("{}", " ".repeat(width));
+                            }
+                        }
+                        
+                        if i < all_renders.len() - 1 {
+                            print!("    "); // 4 espacios de margen entre árboles
+                        }
+                    }
+                    println!();
+                }
+                println!("\n");
+            }
+            
+            if progress >= 1.0 {
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(50));
         }
         return Ok(());
     }
