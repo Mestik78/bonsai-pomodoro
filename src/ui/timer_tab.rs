@@ -56,7 +56,7 @@ pub fn render(frame: &mut Frame, app: &App, inner_area: Rect) {
     };
 
     // 1. Draw Bonsai Fullscreen
-    let seed = active_timer.seed;
+    let seed = active_timer.get_seed();
     let progress = if app.is_selecting_plant {
         1.0
     } else if active_timer.state == Some(TimerState::New) || matches!(active_timer.state, Some(TimerState::Starting(_))) {

@@ -32,7 +32,8 @@ pub struct TimerSession {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
 
-    pub seed: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub seed: Option<u64>,
 
     #[serde(default)]
     pub plant_type: PlantType,
@@ -48,8 +49,19 @@ impl TimerSession {
             actual_runtime: None,
             title: None,
             description: None,
-            seed: rand::random(),
+            seed: None,
             plant_type,
+        }
+    }
+
+    pub fn get_seed(&self) -> u64 {
+        if let Some(s) = self.seed {
+            s
+        } else {
+            use std::hash::{Hash, Hasher};
+            let mut hasher = std::collections::hash_map::DefaultHasher::new();
+            self.start_time.hash(&mut hasher);
+            hasher.finish()
         }
     }
 

@@ -17,7 +17,7 @@ pub fn handle_event(app: &mut App, tick_rate: Duration) -> io::Result<bool> {
                                 if app.current_tab == crate::models::tabs::Tab::Timer {
                                     if app.timers[0].state == Some(crate::models::timer::TimerState::New) {
                                         app.is_selecting_plant = true;
-                                        app.timers[0].seed = rand::random();
+                                        app.timers[0].seed = Some(rand::random());
                                     }
                                 }
                             },
@@ -31,7 +31,7 @@ pub fn handle_event(app: &mut App, tick_rate: Duration) -> io::Result<bool> {
                             KeyCode::Char('r') => {
                                 if app.current_tab == crate::models::tabs::Tab::Timer {
                                     if app.is_selecting_plant {
-                                        app.timers[0].seed = rand::random();
+                                        app.timers[0].seed = Some(rand::random());
                                     } else {
                                         app.reset_timer();
                                     }

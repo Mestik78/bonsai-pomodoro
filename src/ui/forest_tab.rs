@@ -94,7 +94,7 @@ pub fn render(frame: &mut Frame, app: &mut App, inner_area: Rect) {
             let d = (duration as f64).max(0.0);
             let x = (d / 3000.0).clamp(0.0, 1.0);
             let progress = (x * x * (3.0 - 2.0 * x)) as f32;
-            let plant = crate::models::plant::Plant::new(t.seed, t.plant_type.clone(), progress);
+            let plant = crate::models::plant::Plant::new(t.get_seed(), t.plant_type.clone(), progress);
             let mini_canvas = crate::models::plant::generate_plant(&plant);
             let is_bonsai_selected = is_selected && app.forest.level == ForestLevel::Bonsai && t_idx == app.forest.selected_bonsai;
             let pot_color = if is_bonsai_selected { Some(Color::Yellow) } else { None };
@@ -214,7 +214,7 @@ pub fn render(frame: &mut Frame, app: &mut App, inner_area: Rect) {
                     let d = (duration as f64).max(0.0);
                     let x = (d / 3000.0).clamp(0.0, 1.0);
                     let progress = (x * x * (3.0 - 2.0 * x)) as f32;
-                    let plant = crate::models::plant::Plant::new(selected_bonsai.seed, selected_bonsai.plant_type.clone(), progress);
+                    let plant = crate::models::plant::Plant::new(selected_bonsai.get_seed(), selected_bonsai.plant_type.clone(), progress);
                     let canvas = crate::models::plant::generate_plant(&plant);
                     
                     let plant_frame = bonsai::PlantFrame::new(Some(0), None);
