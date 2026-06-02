@@ -49,6 +49,7 @@ fn main() -> io::Result<()> {
         let plant_types = vec![
             crate::models::plant::PlantType::Bonsai,
             crate::models::plant::PlantType::Cactus,
+            crate::models::plant::PlantType::LemonTree,
         ];
 
         // Precalcular altura máxima para anclar la maceta
@@ -111,8 +112,10 @@ fn main() -> io::Result<()> {
                                         match c {
                                             ratatui::style::Color::Green | ratatui::style::Color::LightGreen => print!("\x1b[32m"),
                                             ratatui::style::Color::DarkGray => print!("\x1b[90m"),
+                                            ratatui::style::Color::Black => print!("\x1b[30m"),
                                             ratatui::style::Color::Rgb(r, g, b) => print!("\x1b[38;2;{};{};{}m", r, g, b),
-                                            ratatui::style::Color::Red | ratatui::style::Color::LightRed | ratatui::style::Color::Magenta | ratatui::style::Color::Yellow => print!("\x1b[31m"),
+                                            ratatui::style::Color::Red | ratatui::style::Color::LightRed | ratatui::style::Color::Magenta => print!("\x1b[31m"),
+                                            ratatui::style::Color::Yellow => print!("\x1b[33m"),
                                             _ => print!("\x1b[0m"),
                                         }
                                     }
