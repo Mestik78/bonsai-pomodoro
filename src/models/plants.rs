@@ -26,6 +26,7 @@ impl PlantsState {
                 ("Bonsai", PlantType::Bonsai),
                 ("LemonTree", PlantType::LemonTree),
                 ("Cactus", PlantType::Cactus),
+                ("Bush", PlantType::Bush),
             ],
         }
     }

@@ -1,4 +1,4 @@
-use super::canvas::{BonsaiCanvas, BonsaiCell};
+use super::canvas::{BonsaiCanvas, BonsaiCell, ElementType};
 use rand::{Rng, SeedableRng};
 use rand::rngs::StdRng;
 use ratatui::style::Color;
@@ -193,12 +193,17 @@ fn branch(canvas: &mut BonsaiCanvas, rng: &mut StdRng, fruit_rng: &mut StdRng, m
         
         let mut color = choose_color(rng, btype);
         let mut s = choose_string(rng, btype, life, dx, dy);
+        let mut element_type = match btype {
+            BranchType::Trunk | BranchType::ShootLeft | BranchType::ShootRight => ElementType::Trunk,
+            BranchType::Dying | BranchType::Dead => ElementType::Leaf,
+        };
         
         if (btype == BranchType::Dying || btype == BranchType::Dead) && (s == "&" || s == "*") {
             if let Some(f) = fruit {
                 if fruit_rng.gen_range(0..100) < fruit_quantity {
                     s = f.character.to_string();
                     color = f.color;
+                    element_type = ElementType::Fruit;
                 }
             }
         }
@@ -208,6 +213,7 @@ fn branch(canvas: &mut BonsaiCanvas, rng: &mut StdRng, fruit_rng: &mut StdRng, m
             canvas.cells.insert((x + i as i32, y), BonsaiCell {
                 content: c.to_string(),
                 color,
+                element_type,
             });
         }
     }

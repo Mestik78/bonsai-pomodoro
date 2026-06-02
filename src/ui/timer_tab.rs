@@ -78,6 +78,7 @@ pub fn render(frame: &mut Frame, app: &App, inner_area: Rect) {
             canvas.cells.insert((0, y.round() as i32), bonsai::BonsaiCell {
                 content: "*".to_string(),
                 color: Color::Yellow,
+                element_type: crate::bonsai::canvas::ElementType::Trunk,
             });
         }
     }

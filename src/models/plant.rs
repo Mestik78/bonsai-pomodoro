@@ -19,6 +19,7 @@ pub enum PlantType {
     Bonsai,
     LemonTree,
     Cactus,
+    Bush,
 }
 
 impl Default for PlantType {
@@ -45,6 +46,10 @@ pub fn generate_plant(plant: &Plant) -> bonsai::canvas::BonsaiCanvas {
         PlantType::Cactus => {
             let flower = Fruit::new('✿', Color::Rgb(255, 20, 147));
             bonsai::generate_cactus(plant.seed, plant.progress, Some(flower), 2)
+        },
+        PlantType::Bush => {
+            // The bush gets no fruit for now, or just the default.
+            bonsai::generate_bush(plant.seed, plant.progress, None, 0)
         },
         PlantType::LemonTree => {
             let lemon = Fruit::new('●', Color::Rgb(255, 244, 79));

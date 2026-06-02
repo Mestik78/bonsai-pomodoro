@@ -1,9 +1,17 @@
 use ratatui::style::Color;
 use std::collections::HashMap;
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum ElementType {
+    Trunk,
+    Leaf,
+    Fruit,
+}
+
 #[derive(Clone)]
 pub struct BonsaiCell {
     pub content: String,
     pub color: Color,
+    pub element_type: ElementType,
 }
 
 pub struct BonsaiCanvas {
@@ -138,6 +146,7 @@ impl BonsaiCanvas {
                 for x in (min_x..=max_x).step_by(step_x as usize) {
                     let mut braille_code = 0;
                     let mut last_color = Color::Green;
+                    let mut max_element = ElementType::Trunk;
                     let mut has_cell = false;
                     
                     // Braille is 2x4 dots. We map the 2x4 grid to the source step_x * step_y region.
@@ -148,7 +157,10 @@ impl BonsaiCanvas {
                             
                             if let Some(cell) = self.cells.get(&(x + src_dx, y + src_dy)) {
                                 has_cell = true;
-                                last_color = cell.color;
+                                if cell.element_type >= max_element {
+                                    max_element = cell.element_type;
+                                    last_color = cell.color;
+                                }
                                 
                                 let dot = match (bx, by) {
                                     (0, 0) => 0x01,
