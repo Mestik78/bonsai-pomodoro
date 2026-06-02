@@ -15,23 +15,25 @@ pub struct ForestMap {
     pub grid: HashMap<(i32, i32), MapElement>,
 }
 
+struct BlobInfo {
+    cx: i32,
+    cy: i32,
+    r: i32,
+}
+
 impl ForestMap {
     pub fn build(timers: &[TimerSession], global_seed: u64) -> Self {
         let mut map = ForestMap {
             grid: HashMap::new(),
         };
 
-        // Agrupar timers por día
-        // Vec<(fecha, Vec<index_en_timers>)>
         let mut days: Vec<(String, Vec<usize>)> = Vec::new();
-        
         for (i, t) in timers.iter().enumerate() {
             if t.state.is_none() {
                 let date_str = match chrono::DateTime::parse_from_rfc3339(&t.start_time) {
                     Ok(dt) => dt.format("%Y-%m-%d").to_string(),
                     Err(_) => t.start_time.clone(),
                 };
-                
                 if let Some(pos) = days.iter().position(|(d, _)| *d == date_str) {
                     days[pos].1.push(i);
                 } else {
@@ -40,27 +42,94 @@ impl ForestMap {
             }
         }
         
-        // Ordenar los días por fecha (alfabético en YYYY-MM-DD funciona)
         days.sort_by(|a, b| a.0.cmp(&b.0));
-        
-        if days.is_empty() {
-            return map; // Mapa vacío
-        }
+        if days.is_empty() { return map; }
         
         let mut rng = StdRng::seed_from_u64(global_seed);
-        
-        let mut current_blob_x = 0;
-        let mut current_blob_y = 0;
+        let mut placed_blobs: Vec<BlobInfo> = Vec::new();
         
         for (day_idx, (_, timer_indices)) in days.iter().enumerate() {
-            // Posicionar las plantas del día actual en espiral alrededor de current_blob_x, current_blob_y
-            // Espiral simple: 0,0 luego derecha, arriba, izquierda, izquierda, abajo, abajo...
+            let num_plants = timer_indices.len() as f32;
+            let r_new = num_plants.sqrt().ceil() as i32 + 2;
+            
+            let mut current_blob_x = 0;
+            let mut current_blob_y = 0;
+            
+            if day_idx > 0 {
+                let mut placed = false;
+                let mut tries = 0;
+                let mut extra_distance = 0;
+                
+                let mut parent_cx = 0;
+                let mut parent_cy = 0;
+                
+                while !placed {
+                    let parent_idx = rng.gen_range(0..day_idx);
+                    let parent = &placed_blobs[parent_idx];
+                    
+                    let theta: f32 = rng.gen_range(0.0..std::f32::consts::TAU);
+                    let d = rng.gen_range(2..=5) + extra_distance;
+                    let target_r = parent.r + r_new + d;
+                    
+                    let test_cx = parent.cx + (target_r as f32 * theta.cos()).round() as i32;
+                    let test_cy = parent.cy + (target_r as f32 * theta.sin()).round() as i32;
+                    
+                    let mut collides = false;
+                    for blob in &placed_blobs {
+                        let dist_sq = (test_cx - blob.cx).pow(2) + (test_cy - blob.cy).pow(2);
+                        let min_dist = blob.r + r_new;
+                        if dist_sq <= min_dist.pow(2) {
+                            collides = true;
+                            break;
+                        }
+                    }
+                    
+                    if !collides {
+                        current_blob_x = test_cx;
+                        current_blob_y = test_cy;
+                        parent_cx = parent.cx;
+                        parent_cy = parent.cy;
+                        placed = true;
+                    } else {
+                        tries += 1;
+                        if tries > 20 {
+                            extra_distance += 2;
+                            tries = 0;
+                        }
+                    }
+                }
+                
+                // Bresenham path
+                let mut path_x = parent_cx;
+                let mut path_y = parent_cy;
+                let dx = (current_blob_x - parent_cx).abs();
+                let sx = if parent_cx < current_blob_x { 1 } else { -1 };
+                let dy = -(current_blob_y - parent_cy).abs();
+                let sy = if parent_cy < current_blob_y { 1 } else { -1 };
+                let mut err = dx + dy;
+                
+                loop {
+                    map.grid.entry((path_x, path_y)).or_insert(MapElement::Path);
+                    if path_x == current_blob_x && path_y == current_blob_y { break; }
+                    let e2 = 2 * err;
+                    if e2 >= dy {
+                        err += dy;
+                        path_x += sx;
+                    }
+                    if e2 <= dx {
+                        err += dx;
+                        path_y += sy;
+                    }
+                }
+            }
+            
+            placed_blobs.push(BlobInfo { cx: current_blob_x, cy: current_blob_y, r: r_new });
+            
             let mut dx = 0;
             let mut dy = -1;
             let mut rx = 0;
             let mut ry = 0;
             
-            // Para poder dibujar caminos alrededor del blob, guardamos los límites
             let mut min_x = current_blob_x;
             let mut max_x = current_blob_x;
             let mut min_y = current_blob_y;
@@ -85,45 +154,10 @@ impl ForestMap {
                 max_y = max_y.max(py);
             }
             
-            // Rodear el blob actual con caminos
             for x in (min_x - 1)..=(max_x + 1) {
                 for y in (min_y - 1)..=(max_y + 1) {
                     map.grid.entry((x, y)).or_insert(MapElement::Path);
                 }
-            }
-            
-            // Decidir la posición del siguiente blob (Random Walk)
-            if day_idx < days.len() - 1 {
-                let direction = rng.gen_range(0..4);
-                let jump_distance = rng.gen_range(5..=10);
-                
-                let next_x = match direction {
-                    0 => current_blob_x + jump_distance, // Este
-                    1 => current_blob_x - jump_distance, // Oeste
-                    _ => current_blob_x,
-                };
-                
-                let next_y = match direction {
-                    2 => current_blob_y + jump_distance, // Norte
-                    3 => current_blob_y - jump_distance, // Sur
-                    _ => current_blob_y,
-                };
-                
-                // Trazar un camino Manhattan desde current al next
-                let mut path_x = current_blob_x;
-                let mut path_y = current_blob_y;
-                
-                while path_x != next_x {
-                    path_x += if next_x > path_x { 1 } else { -1 };
-                    map.grid.entry((path_x, path_y)).or_insert(MapElement::Path);
-                }
-                while path_y != next_y {
-                    path_y += if next_y > path_y { 1 } else { -1 };
-                    map.grid.entry((path_x, path_y)).or_insert(MapElement::Path);
-                }
-                
-                current_blob_x = next_x;
-                current_blob_y = next_y;
             }
         }
 
