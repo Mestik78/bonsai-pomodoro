@@ -75,12 +75,10 @@ impl App {
     }
 
     pub fn save_state(&self) {
-        let timers = self.timers.clone();
-        let is_production = self.is_production;
-        std::thread::spawn(move || {
-            let state = AppState { timers };
-            state.save(is_production);
-        });
+        let state = AppState {
+            timers: self.timers.clone(),
+        };
+        state.save(self.is_production);
     }
 
     pub fn active_timer(&self) -> &TimerSession {

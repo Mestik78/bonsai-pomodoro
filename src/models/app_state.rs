@@ -40,7 +40,10 @@ impl AppState {
     pub fn save(&self, is_production: bool) {
         if let Some(path) = Self::state_file_path(is_production) {
             if let Ok(json) = serde_json::to_string_pretty(self) {
-                let _ = fs::write(path, json);
+                let tmp_path = path.with_extension("json.tmp");
+                if fs::write(&tmp_path, json).is_ok() {
+                    let _ = fs::rename(tmp_path, path);
+                }
             }
         }
     }
