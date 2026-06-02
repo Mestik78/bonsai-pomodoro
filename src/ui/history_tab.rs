@@ -9,6 +9,7 @@ use ratatui::{
 use crate::app::App;
 use crate::models::timer::TimerSession;
 use crate::models::history::{HistoryLevel, NavDir};
+use crate::models::tile::{Tile, PlantTile};
 use crate::bonsai;
 
 
@@ -97,7 +98,13 @@ pub fn render(frame: &mut Frame, app: &mut App, inner_area: Rect) {
             let pot_color = if is_bonsai_selected { Some(Color::Yellow) } else { None };
             
             let plant_frame = bonsai::PlantFrame::new(Some(1), None); // Max scale 0.5 (index 1)
-            let mini_lines = plant_frame.render(&mini_canvas, available_width as u16, target_tree_height as u16, Some(duration_str), pot_color);
+            let tile = PlantTile {
+                canvas: &mini_canvas,
+                frame: plant_frame,
+                label: Some(duration_str),
+                pot_color,
+            };
+            let mini_lines = tile.render(available_width as u16, target_tree_height as u16);
             
             let mut block_lines = Vec::new();
             
@@ -226,7 +233,13 @@ pub fn render(frame: &mut Frame, app: &mut App, inner_area: Rect) {
                     let canvas = crate::models::plant::generate_plant(&plant);
                     
                     let plant_frame = bonsai::PlantFrame::new(Some(0), None);
-                    let bonsai_lines = plant_frame.render(&canvas, details_area.width, details_area.height, Some(duration_str.clone()), None);
+                    let tile = PlantTile {
+                        canvas: &canvas,
+                        frame: plant_frame,
+                        label: Some(duration_str.clone()),
+                        pot_color: None,
+                    };
+                    let bonsai_lines = tile.render(details_area.width, details_area.height);
                     
                     let bonsai_height = bonsai_lines.len() as u16;
                     let bottom_height = bonsai_height + 4;

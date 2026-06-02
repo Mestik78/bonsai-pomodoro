@@ -48,6 +48,8 @@ pub fn handle_event(app: &mut App, tick_rate: Duration) -> io::Result<bool> {
                             KeyCode::Down => app.dispatch_event(crate::models::tabs::TabEvent::Down { is_ctrl: key.modifiers.contains(KeyModifiers::CONTROL) }),
                             KeyCode::Enter => app.dispatch_event(crate::models::tabs::TabEvent::Enter),
                             KeyCode::Esc => app.dispatch_event(crate::models::tabs::TabEvent::Esc),
+                            KeyCode::Char('+') => app.dispatch_event(crate::models::tabs::TabEvent::ZoomIn),
+                            KeyCode::Char('-') => app.dispatch_event(crate::models::tabs::TabEvent::ZoomOut),
                             _ => {}
                         }
                     },

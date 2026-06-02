@@ -1,6 +1,7 @@
 use std::time::Instant;
 
 use crate::models::history::HistoryState;
+use crate::models::forest::ForestState;
 use crate::models::stats::StatsState;
 use crate::models::plants::PlantsState;
 use crate::models::tabs::Tab;
@@ -29,6 +30,7 @@ pub struct App {
     pub mode: AppMode,
     pub is_production: bool,
     pub history: HistoryState,
+    pub forest: ForestState,
     pub stats: StatsState,
     pub plants: PlantsState,
 }
@@ -69,7 +71,7 @@ impl App {
         let mut timer_plant_list_state = ratatui::widgets::ListState::default();
         timer_plant_list_state.select(Some(0));
 
-        let mut tab_titles = vec!["Timer", "History", "Stats"];
+        let mut tab_titles = vec!["Timer", "History", "Forest", "Stats"];
         if !is_production {
             tab_titles.push("Plants");
         }
@@ -85,6 +87,7 @@ impl App {
             mode: AppMode::Normal,
             is_production,
             history,
+            forest: ForestState::new(),
             stats,
             plants,
         }
@@ -292,6 +295,7 @@ impl App {
         let result = match self.current_tab {
             Tab::Timer => self.handle_timer_event(&event),
             Tab::History => self.history.handle_event(&event, &self.timers),
+            Tab::Forest => self.forest.handle_event(&event),
             Tab::Stats => self.stats.handle_event(&event),
             Tab::Plants => self.plants.handle_event(&event),
         };

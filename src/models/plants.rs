@@ -68,6 +68,7 @@ impl PlantsState {
                 self.is_selecting = true;
                 EventResult::Consumed
             },
+            TabEvent::ZoomIn | TabEvent::ZoomOut => EventResult::Ignored,
             TabEvent::Esc => {
                 self.is_selecting = false;
                 EventResult::Consumed

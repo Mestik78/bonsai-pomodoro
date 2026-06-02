@@ -28,6 +28,7 @@ pub const SCALES: [Scale; 3] = [
     },
 ];
 
+#[derive(Clone, Copy)]
 pub struct PlantFrame {
     pub max_scale: usize,
     pub min_scale: usize,

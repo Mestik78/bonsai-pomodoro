@@ -79,6 +79,7 @@ impl HistoryState {
                 self.escape();
                 EventResult::Consumed
             },
+            TabEvent::ZoomIn | TabEvent::ZoomOut => EventResult::Ignored,
         }
     }
 

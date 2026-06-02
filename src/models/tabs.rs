@@ -2,6 +2,7 @@
 pub enum Tab {
     Timer,
     History,
+    Forest,
     Stats,
     Plants,
 }
@@ -10,7 +11,8 @@ impl Tab {
     pub fn next(&self, is_production: bool) -> Self {
         match self {
             Tab::Timer => Tab::History,
-            Tab::History => Tab::Stats,
+            Tab::History => Tab::Forest,
+            Tab::Forest => Tab::Stats,
             Tab::Stats => {
                 if is_production {
                     Tab::Timer
@@ -32,7 +34,8 @@ impl Tab {
                 }
             },
             Tab::History => Tab::Timer,
-            Tab::Stats => Tab::History,
+            Tab::Forest => Tab::History,
+            Tab::Stats => Tab::Forest,
             Tab::Plants => Tab::Stats,
         }
     }
@@ -45,6 +48,8 @@ pub enum TabEvent {
     Right,
     Enter,
     Esc,
+    ZoomIn,
+    ZoomOut,
 }
 
 pub enum EventResult {
