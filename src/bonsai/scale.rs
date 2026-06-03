@@ -12,18 +12,18 @@ pub struct Scale {
 
 pub const SCALES: [Scale; 4] = [
     Scale {
-        min_width: 43,
-        min_height: 20,
+        min_width: 52,
+        min_height: 24,
         render_fn: BonsaiCanvas::render_full,
     },
     Scale {
-        min_width: 20,
-        min_height: 10,
+        min_width: 24,
+        min_height: 12,
         render_fn: BonsaiCanvas::render_medium,
     },
     Scale {
-        min_width: 10,
-        min_height: 5,
+        min_width: 12,
+        min_height: 6,
         render_fn: BonsaiCanvas::render_small,
     },
     Scale {

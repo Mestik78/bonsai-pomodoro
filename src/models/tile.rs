@@ -16,7 +16,37 @@ pub struct PlantTile<'a> {
 
 impl<'a> Tile for PlantTile<'a> {
     fn render(&self, width: u16, height: u16) -> Vec<Line<'static>> {
-        self.frame.render(self.canvas, width, height, self.label.clone(), self.pot_color)
+        let mut lines = self.frame.render(self.canvas, width, height, self.label.clone(), self.pot_color);
+        
+        for line in &mut lines {
+            let line_width: usize = line.spans.iter().map(|s| s.content.chars().count()).sum();
+            if (line_width as u16) < width {
+                let pad_total = width - line_width as u16;
+                let pad_left = pad_total / 2;
+                let pad_right = pad_total - pad_left;
+                
+                let mut new_spans = vec![ratatui::text::Span::raw(" ".repeat(pad_left as usize))];
+                new_spans.extend(line.spans.clone());
+                new_spans.push(ratatui::text::Span::raw(" ".repeat(pad_right as usize)));
+                *line = ratatui::text::Line::from(new_spans);
+            }
+        }
+        
+        let actual_height = lines.len() as u16;
+        if actual_height < height {
+            let pad_top = height - actual_height;
+            let mut padded_lines = Vec::new();
+            for _ in 0..pad_top {
+                padded_lines.push(ratatui::text::Line::from(" ".repeat(width as usize)));
+            }
+            padded_lines.extend(lines);
+            lines = padded_lines;
+        } else if actual_height > height {
+            let skip = actual_height - height;
+            lines = lines.into_iter().skip(skip as usize).collect();
+        }
+        
+        lines
     }
 }
 

@@ -22,9 +22,9 @@ impl Tilemap {
     pub fn new() -> Self {
         Self {
             zoom_levels: vec![
-                ZoomLevel { tile_width: 43, tile_height: 20 },
-                ZoomLevel { tile_width: 20, tile_height: 10 },
-                ZoomLevel { tile_width: 10, tile_height: 5 },
+                ZoomLevel { tile_width: 52, tile_height: 24 },
+                ZoomLevel { tile_width: 24, tile_height: 12 },
+                ZoomLevel { tile_width: 12, tile_height: 6 },
                 ZoomLevel { tile_width: 2, tile_height: 1 },
             ],
             current_zoom: 1, // Medium

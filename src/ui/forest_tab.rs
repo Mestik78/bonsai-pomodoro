@@ -36,6 +36,9 @@ fn slice_line(line: &Line, skip: usize, take: usize) -> Line<'static> {
         skipped += if skipped < skip { start_char } else { 0 };
         taken += end_char - start_char;
     }
+    if taken < take {
+        new_spans.push(Span::raw(" ".repeat(take - taken)));
+    }
     
     Line::from(new_spans)
 }
@@ -82,7 +85,7 @@ pub fn render(frame: &mut Frame, app: &App, inner_area: Rect) {
                     let tile = PlantTile {
                         canvas: &canvas,
                         frame: plant_frame.clone(),
-                        label: t.title.clone(),
+                        label: Some(format!("{:02}:{:02}", t.duration / 60, t.duration % 60)),
                         pot_color: None,
                     };
                     tile.render(tile_w, tile_h)
