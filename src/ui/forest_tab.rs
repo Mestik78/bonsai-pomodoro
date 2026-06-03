@@ -119,8 +119,8 @@ pub fn render(frame: &mut Frame, app: &App, inner_area: Rect) {
     let min_row = (logical_start_y - screen_height as i32 + 1).div_euclid(tile_h as i32);
     let max_row = logical_start_y.div_euclid(tile_h as i32);
     
-    let plant = crate::models::plant::Plant::new(1234, crate::models::plant::PlantType::Bonsai, 1.0);
-    let canvas = crate::models::plant::generate_plant(&plant);
+    let _plant = crate::models::plant::Plant::new(1234, crate::models::plant::PlantType::Bonsai, 1.0);
+    let _canvas = crate::models::plant::generate_plant(&_plant);
     let plant_frame = crate::bonsai::PlantFrame::new(Some(map.current_zoom), Some(map.current_zoom));
 
     let mut tile_cache = HashMap::new();
@@ -209,11 +209,22 @@ pub fn render(frame: &mut Frame, app: &App, inner_area: Rect) {
         all_lines.push(Line::from(combined_spans));
     }
     
-    let status_color = if state.is_moving { Color::Green } else { Color::DarkGray };
-    let status_text = if state.is_moving {
-        " MOVEMENT MODE (Arrows to pan, +/- to zoom, Esc to exit) "
+    let status_color = if state.is_searching || !state.search_matches.is_empty() {
+        Color::Yellow
+    } else if state.is_moving {
+        Color::Green
     } else {
-        " VIEW MODE (Enter to move, +/- to zoom) "
+        Color::DarkGray
+    };
+    
+    let status_text = if state.is_searching {
+        format!(" /{}_ ", state.search_query)
+    } else if !state.search_matches.is_empty() {
+        format!(" Match {}/{} for '{}' (n to jump, Esc to clear) ", state.search_index + 1, state.search_matches.len(), state.search_query)
+    } else if state.is_moving {
+        " MOVEMENT MODE (Arrows to pan, +/- to zoom, / to search, Esc to exit) ".to_string()
+    } else {
+        " VIEW MODE (Enter to move, +/- to zoom, / to search) ".to_string()
     };
 
     let p = Paragraph::new(all_lines)

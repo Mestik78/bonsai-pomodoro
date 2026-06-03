@@ -13,6 +13,7 @@ pub enum MapElement {
 #[derive(Clone, Default)]
 pub struct ForestMap {
     pub grid: HashMap<(i32, i32), MapElement>,
+    pub day_blobs: Vec<(String, i32, i32)>,
 }
 
 struct BlobInfo {
@@ -25,6 +26,7 @@ impl ForestMap {
     pub fn build(timers: &[TimerSession], global_seed: u64) -> Self {
         let mut map = ForestMap {
             grid: HashMap::new(),
+            day_blobs: Vec::new(),
         };
 
         let mut days: Vec<(String, Vec<usize>)> = Vec::new();
@@ -63,7 +65,7 @@ impl ForestMap {
             let mut visited = HashSet::new();
             visited.insert((0, 0));
             
-            let mut add_to_frontier = |x: i32, y: i32, v: &mut HashSet<(i32, i32)>, f: &mut Vec<(i32, i32)>| {
+            let add_to_frontier = |x: i32, y: i32, v: &mut HashSet<(i32, i32)>, f: &mut Vec<(i32, i32)>| {
                 for (dx, dy) in &[(0, 1), (0, -1), (1, 0), (-1, 0)] {
                     let nx = x + dx;
                     let ny = y + dy;
@@ -202,6 +204,7 @@ impl ForestMap {
             }
             
             placed_blobs.push(BlobInfo { cx: current_blob_x, cy: current_blob_y, r: r_new });
+            map.day_blobs.push((days[day_idx].0.clone(), current_blob_x, current_blob_y));
             
             for (idx, &timer_idx) in timer_indices.iter().enumerate() {
                 let cell = blob_cells[idx];

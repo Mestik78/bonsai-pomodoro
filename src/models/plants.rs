@@ -105,6 +105,7 @@ impl PlantsState {
                     EventResult::Ignored
                 }
             },
+            _ => EventResult::Ignored,
         }
     }
 

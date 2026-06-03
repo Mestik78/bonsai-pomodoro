@@ -50,6 +50,10 @@ pub enum TabEvent {
     Esc,
     ZoomIn,
     ZoomOut,
+    SearchStart,
+    SearchNext,
+    Char(char),
+    Backspace,
 }
 
 pub enum EventResult {

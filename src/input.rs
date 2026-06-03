@@ -9,47 +9,71 @@ pub fn handle_event(app: &mut App, tick_rate: Duration) -> io::Result<bool> {
                 match app.mode {
                     AppMode::Normal => {
                         match key.code {
-                            KeyCode::Char('q') => app.quit(),
                             KeyCode::Left => app.dispatch_event(crate::models::tabs::TabEvent::Left),
                             KeyCode::Right => app.dispatch_event(crate::models::tabs::TabEvent::Right),
                             KeyCode::Tab => app.next_tab(),
-                            KeyCode::Char('s') => {
-                                if app.current_tab == crate::models::tabs::Tab::Timer {
-                                    if app.timers[0].state == Some(crate::models::timer::TimerState::New) {
-                                        app.is_selecting_plant = true;
-                                        app.timers[0].seed = rand::random();
-                                    }
-                                }
-                            },
-                            KeyCode::Char(' ') => {
-                                if app.current_tab == crate::models::tabs::Tab::Plants {
-                                    app.plants.toggle_animation();
-                                } else if app.current_tab != crate::models::tabs::Tab::Timer || !app.is_selecting_plant {
-                                    app.toggle_timer();
-                                }
-                            },
-                            KeyCode::Char('r') => {
-                                if app.current_tab == crate::models::tabs::Tab::Timer {
-                                    if app.is_selecting_plant {
-                                        app.timers[0].seed = rand::random();
-                                    } else {
-                                        app.reset_timer();
-                                    }
-                                } else if app.current_tab == crate::models::tabs::Tab::Plants {
-                                    app.plants.seed = rand::random();
-                                }
-                            },
-                            KeyCode::Char('f') => {
-                                if app.current_tab == crate::models::tabs::Tab::Timer && !app.is_selecting_plant {
-                                    app.finish_early();
-                                }
-                            },
                             KeyCode::Up => app.dispatch_event(crate::models::tabs::TabEvent::Up { is_ctrl: key.modifiers.contains(KeyModifiers::CONTROL) }),
                             KeyCode::Down => app.dispatch_event(crate::models::tabs::TabEvent::Down { is_ctrl: key.modifiers.contains(KeyModifiers::CONTROL) }),
                             KeyCode::Enter => app.dispatch_event(crate::models::tabs::TabEvent::Enter),
                             KeyCode::Esc => app.dispatch_event(crate::models::tabs::TabEvent::Esc),
-                            KeyCode::Char('+') => app.dispatch_event(crate::models::tabs::TabEvent::ZoomIn),
-                            KeyCode::Char('-') => app.dispatch_event(crate::models::tabs::TabEvent::ZoomOut),
+                            KeyCode::Backspace => {
+                                if app.current_tab == crate::models::tabs::Tab::Forest && app.forest.is_searching {
+                                    app.dispatch_event(crate::models::tabs::TabEvent::Backspace);
+                                }
+                            },
+                            KeyCode::Char(c) => {
+                                if app.current_tab == crate::models::tabs::Tab::Forest && app.forest.is_searching {
+                                    app.dispatch_event(crate::models::tabs::TabEvent::Char(c));
+                                } else {
+                                    match c {
+                                        'q' => app.quit(),
+                                        's' => {
+                                            if app.current_tab == crate::models::tabs::Tab::Timer {
+                                                if app.timers[0].state == Some(crate::models::timer::TimerState::New) {
+                                                    app.is_selecting_plant = true;
+                                                    app.timers[0].seed = rand::random();
+                                                }
+                                            }
+                                        },
+                                        ' ' => {
+                                            if app.current_tab == crate::models::tabs::Tab::Plants {
+                                                app.plants.toggle_animation();
+                                            } else if app.current_tab != crate::models::tabs::Tab::Timer || !app.is_selecting_plant {
+                                                app.toggle_timer();
+                                            }
+                                        },
+                                        'r' => {
+                                            if app.current_tab == crate::models::tabs::Tab::Timer {
+                                                if app.is_selecting_plant {
+                                                    app.timers[0].seed = rand::random();
+                                                } else {
+                                                    app.reset_timer();
+                                                }
+                                            } else if app.current_tab == crate::models::tabs::Tab::Plants {
+                                                app.plants.seed = rand::random();
+                                            }
+                                        },
+                                        'f' => {
+                                            if app.current_tab == crate::models::tabs::Tab::Timer && !app.is_selecting_plant {
+                                                app.finish_early();
+                                            }
+                                        },
+                                        '+' => app.dispatch_event(crate::models::tabs::TabEvent::ZoomIn),
+                                        '-' => app.dispatch_event(crate::models::tabs::TabEvent::ZoomOut),
+                                        '/' => {
+                                            if app.current_tab == crate::models::tabs::Tab::Forest {
+                                                app.dispatch_event(crate::models::tabs::TabEvent::SearchStart);
+                                            }
+                                        },
+                                        'n' => {
+                                            if app.current_tab == crate::models::tabs::Tab::Forest {
+                                                app.dispatch_event(crate::models::tabs::TabEvent::SearchNext);
+                                            }
+                                        },
+                                        _ => {}
+                                    }
+                                }
+                            },
                             _ => {}
                         }
                     },

@@ -80,6 +80,7 @@ impl HistoryState {
                 EventResult::Consumed
             },
             TabEvent::ZoomIn | TabEvent::ZoomOut => EventResult::Ignored,
+            _ => EventResult::Ignored,
         }
     }
 
