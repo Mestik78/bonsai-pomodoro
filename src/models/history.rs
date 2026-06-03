@@ -72,8 +72,16 @@ impl HistoryState {
                 }
             },
             TabEvent::Enter => {
-                self.enter();
-                EventResult::Consumed
+                if self.level == HistoryLevel::Day {
+                    self.enter();
+                    EventResult::Consumed
+                } else {
+                    if let Some(idx) = self.get_selected_timer_index(timers) {
+                        EventResult::JumpToForest(idx)
+                    } else {
+                        EventResult::Consumed
+                    }
+                }
             },
             TabEvent::Esc => {
                 if self.level == HistoryLevel::Bonsai {
@@ -138,6 +146,61 @@ impl HistoryState {
 
     pub fn escape(&mut self) {
         self.level = HistoryLevel::Day;
+    }
+
+    pub fn get_selected_timer_index(&self, timers: &[TimerSession]) -> Option<usize> {
+        if self.cached_days.is_empty() { return None; }
+        let selected_idx = self.selected_day;
+        if selected_idx >= self.cached_days.len() { return None; }
+        let date_str = &self.cached_days[selected_idx];
+        
+        let mut count = 0;
+        for (i, t) in timers.iter().enumerate() {
+            if t.state.is_none() {
+                let t_date_str = match chrono::DateTime::parse_from_rfc3339(&t.start_time) {
+                    Ok(dt) => dt.format("%Y-%m-%d").to_string(),
+                    Err(_) => t.start_time.clone(),
+                };
+                if t_date_str == *date_str {
+                    if count == self.selected_bonsai {
+                        return Some(i);
+                    }
+                    count += 1;
+                }
+            }
+        }
+        None
+    }
+
+    pub fn select_timer(&mut self, timer_idx: usize, timers: &[TimerSession]) {
+        if timer_idx >= timers.len() { return; }
+        let t = &timers[timer_idx];
+        let date_str = match chrono::DateTime::parse_from_rfc3339(&t.start_time) {
+            Ok(dt) => dt.format("%Y-%m-%d").to_string(),
+            Err(_) => t.start_time.clone(),
+        };
+        
+        if let Some(day_pos) = self.cached_days.iter().position(|d| d == &date_str) {
+            self.selected_day = day_pos;
+            self.level = HistoryLevel::Bonsai;
+            
+            let mut count = 0;
+            for (i, timer) in timers.iter().enumerate() {
+                if timer.state.is_none() {
+                    let d = match chrono::DateTime::parse_from_rfc3339(&timer.start_time) {
+                        Ok(dt) => dt.format("%Y-%m-%d").to_string(),
+                        Err(_) => timer.start_time.clone(),
+                    };
+                    if d == date_str {
+                        if i == timer_idx {
+                            self.selected_bonsai = count;
+                            break;
+                        }
+                        count += 1;
+                    }
+                }
+            }
+        }
     }
 
     pub fn get_bonsai_count_for_selected_day(&self, timers: &[TimerSession]) -> usize {

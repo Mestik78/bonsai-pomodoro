@@ -38,6 +38,19 @@ impl ForestState {
         self.forest_map = ForestMap::build(timers, global_seed);
     }
 
+    pub fn center_on_timer(&mut self, timer_idx: usize) {
+        for (&(cx, cy), element) in &self.forest_map.grid {
+            if let crate::models::forest_map::MapElement::Plant(idx) = element {
+                if *idx == timer_idx {
+                    self.tilemap.camera_x = cx * (self.tilemap.zoom_levels[self.tilemap.current_zoom].tile_width as i32);
+                    self.tilemap.camera_y = cy * (self.tilemap.zoom_levels[self.tilemap.current_zoom].tile_height as i32);
+                    self.is_movement_mode = false;
+                    break;
+                }
+            }
+        }
+    }
+
     pub fn handle_event(&mut self, event: &TabEvent) -> EventResult {
         if self.is_searching {
             match event {
@@ -110,8 +123,20 @@ impl ForestState {
                     }
                 },
                 TabEvent::Enter => {
-                    self.is_movement_mode = true;
-                    EventResult::Consumed
+                    if self.is_movement_mode {
+                        let zoom = &self.tilemap.zoom_levels[self.tilemap.current_zoom];
+                        let cx = (self.tilemap.camera_x as f32 / zoom.tile_width as f32).round() as i32;
+                        let cy = (self.tilemap.camera_y as f32 / zoom.tile_height as f32).round() as i32;
+                        
+                        if let Some(crate::models::forest_map::MapElement::Plant(idx)) = self.forest_map.grid.get(&(cx, cy)) {
+                            return EventResult::JumpToHistory(*idx);
+                        }
+                        
+                        EventResult::Consumed
+                    } else {
+                        self.is_movement_mode = true;
+                        EventResult::Consumed
+                    }
                 },
                 TabEvent::ZoomIn => { self.tilemap.zoom_in(); EventResult::Consumed },
                 TabEvent::ZoomOut => { self.tilemap.zoom_out(); EventResult::Consumed },

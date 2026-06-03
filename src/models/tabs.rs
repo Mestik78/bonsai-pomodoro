@@ -59,4 +59,6 @@ pub enum TabEvent {
 pub enum EventResult {
     Consumed,
     Ignored,
+    JumpToForest(usize),
+    JumpToHistory(usize),
 }

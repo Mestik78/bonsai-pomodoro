@@ -52,12 +52,24 @@ pub fn handle_event(app: &mut App, tick_rate: Duration) -> io::Result<bool> {
                             } else if is_down {
                                 let _ = app.dispatch_event(crate::models::tabs::TabEvent::Down { is_ctrl: key.modifiers.contains(KeyModifiers::CONTROL) });
                             } else if is_accept {
-                                if matches!(app.dispatch_event(crate::models::tabs::TabEvent::Enter), crate::models::tabs::EventResult::Ignored) {
-                                    if app.current_tab == crate::models::tabs::Tab::Plants {
-                                        app.plants.toggle_animation();
-                                    } else if app.current_tab != crate::models::tabs::Tab::Timer || !app.is_selecting_plant {
-                                        app.toggle_timer();
-                                    }
+                                let res = app.dispatch_event(crate::models::tabs::TabEvent::Enter);
+                                match res {
+                                    crate::models::tabs::EventResult::Ignored => {
+                                        if app.current_tab == crate::models::tabs::Tab::Plants {
+                                            app.plants.toggle_animation();
+                                        } else if app.current_tab != crate::models::tabs::Tab::Timer || !app.is_selecting_plant {
+                                            app.toggle_timer();
+                                        }
+                                    },
+                                    crate::models::tabs::EventResult::JumpToForest(idx) => {
+                                        app.current_tab = crate::models::tabs::Tab::Forest;
+                                        app.forest.center_on_timer(idx);
+                                    },
+                                    crate::models::tabs::EventResult::JumpToHistory(idx) => {
+                                        app.current_tab = crate::models::tabs::Tab::History;
+                                        app.history.select_timer(idx, &app.timers);
+                                    },
+                                    _ => {}
                                 }
                             } else if is_back {
                                 if matches!(app.dispatch_event(crate::models::tabs::TabEvent::Esc), crate::models::tabs::EventResult::Ignored) {
