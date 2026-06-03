@@ -8,8 +8,6 @@ pub struct ForestState {
     #[serde(skip)]
     pub tilemap: Tilemap,
     #[serde(skip)]
-    pub is_moving: bool,
-    #[serde(skip)]
     pub forest_map: ForestMap,
     #[serde(skip)]
     pub is_searching: bool,
@@ -25,7 +23,6 @@ impl ForestState {
     pub fn new() -> Self {
         Self {
             tilemap: Tilemap::new(),
-            is_moving: false,
             forest_map: ForestMap::default(),
             is_searching: false,
             search_query: String::new(),
@@ -75,7 +72,7 @@ impl ForestState {
                 },
                 _ => EventResult::Ignored,
             }
-        } else if self.is_moving {
+        } else {
             match event {
                 TabEvent::Up { .. } => { self.tilemap.pan(0, 1); EventResult::Consumed },
                 TabEvent::Down { .. } => { self.tilemap.pan(0, -1); EventResult::Consumed },
@@ -84,35 +81,8 @@ impl ForestState {
                 TabEvent::ZoomIn => { self.tilemap.zoom_in(); EventResult::Consumed },
                 TabEvent::ZoomOut => { self.tilemap.zoom_out(); EventResult::Consumed },
                 TabEvent::Esc => { 
-                    self.is_moving = false;
                     self.search_matches.clear();
                     EventResult::Consumed 
-                },
-                TabEvent::SearchStart => {
-                    self.is_searching = true;
-                    self.search_query.clear();
-                    self.search_matches.clear();
-                    EventResult::Consumed
-                },
-                TabEvent::SearchNext => {
-                    if !self.search_matches.is_empty() {
-                        self.search_index = (self.search_index + 1) % self.search_matches.len();
-                        let (cx, cy) = self.search_matches[self.search_index];
-                        self.tilemap.camera_x = cx * (self.tilemap.zoom_levels[self.tilemap.current_zoom].tile_width as i32);
-                        self.tilemap.camera_y = cy * (self.tilemap.zoom_levels[self.tilemap.current_zoom].tile_height as i32);
-                    }
-                    EventResult::Consumed
-                },
-                _ => EventResult::Ignored,
-            }
-        } else {
-            match event {
-                TabEvent::Enter => { self.is_moving = true; EventResult::Consumed },
-                TabEvent::ZoomIn => { self.tilemap.zoom_in(); EventResult::Consumed },
-                TabEvent::ZoomOut => { self.tilemap.zoom_out(); EventResult::Consumed },
-                TabEvent::Esc => {
-                    self.search_matches.clear();
-                    EventResult::Consumed
                 },
                 TabEvent::SearchStart => {
                     self.is_searching = true;

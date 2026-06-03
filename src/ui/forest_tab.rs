@@ -62,8 +62,8 @@ pub fn render(frame: &mut Frame, app: &App, inner_area: Rect) {
     let tile_w = zoom_level.tile_width;
     let tile_h = zoom_level.tile_height;
     
-    let screen_width = map_area.width.saturating_sub(2) as usize; // Account for borders
-    let screen_height = map_area.height.saturating_sub(2) as usize;
+    let screen_width = map_area.width as usize;
+    let screen_height = map_area.height as usize;
     
     if screen_width == 0 || screen_height == 0 {
         return;
@@ -78,7 +78,11 @@ pub fn render(frame: &mut Frame, app: &App, inner_area: Rect) {
     };
     
     let mut info_text = " Center a plant to view details ".to_string();
-    if let Some(idx) = selected_idx {
+    if state.is_searching {
+        info_text = format!(" /{}_ ", state.search_query);
+    } else if !state.search_matches.is_empty() {
+        info_text = format!(" Match {}/{} for '{}' (n to jump, Esc to clear) ", state.search_index + 1, state.search_matches.len(), state.search_query);
+    } else if let Some(idx) = selected_idx {
         let selected_timer = &app.timers[idx];
         let title = selected_timer.title.as_deref().unwrap_or("Unnamed Session");
         let date = match chrono::DateTime::parse_from_rfc3339(&selected_timer.start_time) {
@@ -209,26 +213,8 @@ pub fn render(frame: &mut Frame, app: &App, inner_area: Rect) {
         all_lines.push(Line::from(combined_spans));
     }
     
-    let status_color = if state.is_searching || !state.search_matches.is_empty() {
-        Color::Yellow
-    } else if state.is_moving {
-        Color::Green
-    } else {
-        Color::DarkGray
-    };
-    
-    let status_text = if state.is_searching {
-        format!(" /{}_ ", state.search_query)
-    } else if !state.search_matches.is_empty() {
-        format!(" Match {}/{} for '{}' (n to jump, Esc to clear) ", state.search_index + 1, state.search_matches.len(), state.search_query)
-    } else if state.is_moving {
-        " MOVEMENT MODE (Arrows to pan, +/- to zoom, / to search, Esc to exit) ".to_string()
-    } else {
-        " VIEW MODE (Enter to move, +/- to zoom, / to search) ".to_string()
-    };
-
     let p = Paragraph::new(all_lines)
-        .block(Block::default().borders(Borders::ALL).border_style(Style::default().fg(status_color)).title(Span::styled(status_text, Style::default().fg(status_color).add_modifier(Modifier::BOLD))));
+        .block(Block::default().borders(Borders::NONE));
         
     frame.render_widget(p, map_area);
 }
