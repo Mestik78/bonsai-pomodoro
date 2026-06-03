@@ -1,5 +1,5 @@
 use ratatui::{
-    layout::{Alignment, Rect},
+    layout::{Alignment, Rect, Layout, Constraint, Direction},
     style::{Color, Style, Modifier},
     text::{Line, Span},
     widgets::{Block, Borders, Paragraph},
@@ -44,6 +44,17 @@ fn slice_line(line: &Line, skip: usize, take: usize) -> Line<'static> {
 }
 
 pub fn render(frame: &mut Frame, app: &App, inner_area: Rect) {
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(3),
+            Constraint::Min(0),
+        ])
+        .split(inner_area);
+        
+    let info_area = chunks[0];
+    let map_area = chunks[1];
+
     let state = &app.forest;
     let map = &state.tilemap;
     
@@ -51,13 +62,51 @@ pub fn render(frame: &mut Frame, app: &App, inner_area: Rect) {
     let tile_w = zoom_level.tile_width;
     let tile_h = zoom_level.tile_height;
     
-    let screen_width = inner_area.width.saturating_sub(2) as usize; // Account for borders
-    let screen_height = inner_area.height.saturating_sub(2) as usize;
+    let screen_width = map_area.width.saturating_sub(2) as usize; // Account for borders
+    let screen_height = map_area.height.saturating_sub(2) as usize;
     
     if screen_width == 0 || screen_height == 0 {
         return;
     }
     
+    let center_col = (map.camera_x + (tile_w as i32) / 2).div_euclid(tile_w as i32);
+    let center_row = (map.camera_y + (tile_h as i32) / 2).div_euclid(tile_h as i32);
+    
+    let selected_idx = match state.forest_map.grid.get(&(center_col, center_row)) {
+        Some(crate::models::forest_map::MapElement::Plant(idx)) => Some(*idx),
+        _ => None,
+    };
+    
+    let mut info_text = " Center a plant to view details ".to_string();
+    if let Some(idx) = selected_idx {
+        let selected_timer = &app.timers[idx];
+        let title = selected_timer.title.as_deref().unwrap_or("Unnamed Session");
+        let date = match chrono::DateTime::parse_from_rfc3339(&selected_timer.start_time) {
+            Ok(dt) => dt.format("%Y-%m-%d").to_string(),
+            Err(_) => selected_timer.start_time.clone(),
+        };
+        
+        let mut total_duration = 0;
+        for t in &app.timers {
+            if t.state.is_none() {
+                let d = match chrono::DateTime::parse_from_rfc3339(&t.start_time) {
+                    Ok(dt) => dt.format("%Y-%m-%d").to_string(),
+                    Err(_) => t.start_time.clone(),
+                };
+                if d == date {
+                    total_duration += t.duration;
+                }
+            }
+        }
+        
+        info_text = format!(" Plant: {} │ Date: {} │ Day Total: {:02}:{:02} ", title, date, total_duration / 60, total_duration % 60);
+    }
+
+    let info_p = Paragraph::new(info_text)
+        .block(Block::default().borders(Borders::ALL).border_style(Style::default().fg(Color::Yellow)))
+        .alignment(Alignment::Center);
+    frame.render_widget(info_p, info_area);
+
     let start_x = map.camera_x - (screen_width as i32) / 2;
     let start_y = map.camera_y + (screen_height as i32) / 2;
     
@@ -78,15 +127,25 @@ pub fn render(frame: &mut Frame, app: &App, inner_area: Rect) {
     
     for row in min_row..=max_row {
         for col in start_col..=end_col {
+            let is_center = col == (map.camera_x + (tile_w as i32) / 2).div_euclid(tile_w as i32)
+                         && row == (map.camera_y + (tile_h as i32) / 2).div_euclid(tile_h as i32);
+                         
             let tile_lines = match state.forest_map.grid.get(&(col, row)).copied() {
                 Some(crate::models::forest_map::MapElement::Plant(idx)) => {
                     let t = &app.timers[idx];
                     let canvas = crate::models::plant::generate_plant(&crate::models::plant::Plant::new(t.seed, t.plant_type.clone(), 1.0));
+                    
+                    let pot_color = if is_center {
+                        Some(ratatui::style::Color::Yellow)
+                    } else {
+                        None
+                    };
+
                     let tile = PlantTile {
                         canvas: &canvas,
                         frame: plant_frame.clone(),
                         label: Some(format!("{:02}:{:02}", t.duration / 60, t.duration % 60)),
-                        pot_color: None,
+                        pot_color,
                     };
                     tile.render(tile_w, tile_h)
                 },
@@ -160,5 +219,5 @@ pub fn render(frame: &mut Frame, app: &App, inner_area: Rect) {
     let p = Paragraph::new(all_lines)
         .block(Block::default().borders(Borders::ALL).border_style(Style::default().fg(status_color)).title(Span::styled(status_text, Style::default().fg(status_color).add_modifier(Modifier::BOLD))));
         
-    frame.render_widget(p, inner_area);
+    frame.render_widget(p, map_area);
 }
