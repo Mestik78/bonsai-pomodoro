@@ -177,6 +177,20 @@ impl App {
         self.current_tab = self.current_tab.previous(self.is_production);
     }
 
+    pub fn set_tab(&mut self, index: usize) {
+        let num_tabs = if self.is_production { 4 } else { 5 };
+        if index < num_tabs {
+            self.current_tab = match index {
+                0 => Tab::Timer,
+                1 => Tab::History,
+                2 => Tab::Forest,
+                3 => Tab::Stats,
+                4 => Tab::Plants,
+                _ => self.current_tab,
+            };
+        }
+    }
+
     pub fn quit(&mut self) {
         self.should_quit = true;
     }
@@ -301,20 +315,12 @@ impl App {
 
     pub fn dispatch_event(&mut self, event: crate::models::tabs::TabEvent) {
         use crate::models::tabs::{Tab, EventResult};
-        let result = match self.current_tab {
+        let _ = match self.current_tab {
             Tab::Timer => self.handle_timer_event(&event),
             Tab::History => self.history.handle_event(&event, &self.timers),
             Tab::Forest => self.forest.handle_event(&event),
             Tab::Stats => self.stats.handle_event(&event),
             Tab::Plants => self.plants.handle_event(&event),
         };
-
-        if let EventResult::Ignored = result {
-            match event {
-                crate::models::tabs::TabEvent::Left => self.previous_tab(),
-                crate::models::tabs::TabEvent::Right => self.next_tab(),
-                _ => {}
-            }
-        }
     }
 }

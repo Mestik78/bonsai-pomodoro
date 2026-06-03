@@ -11,7 +11,16 @@ pub fn handle_event(app: &mut App, tick_rate: Duration) -> io::Result<bool> {
                         match key.code {
                             KeyCode::Left => app.dispatch_event(crate::models::tabs::TabEvent::Left),
                             KeyCode::Right => app.dispatch_event(crate::models::tabs::TabEvent::Right),
-                            KeyCode::Tab => app.next_tab(),
+                            KeyCode::Tab => {
+                                if key.modifiers.contains(KeyModifiers::CONTROL) {
+                                    app.next_tab();
+                                }
+                            },
+                            KeyCode::BackTab => {
+                                if key.modifiers.contains(KeyModifiers::CONTROL) {
+                                    app.previous_tab();
+                                }
+                            },
                             KeyCode::Up => app.dispatch_event(crate::models::tabs::TabEvent::Up { is_ctrl: key.modifiers.contains(KeyModifiers::CONTROL) }),
                             KeyCode::Down => app.dispatch_event(crate::models::tabs::TabEvent::Down { is_ctrl: key.modifiers.contains(KeyModifiers::CONTROL) }),
                             KeyCode::Enter => app.dispatch_event(crate::models::tabs::TabEvent::Enter),
@@ -26,6 +35,10 @@ pub fn handle_event(app: &mut App, tick_rate: Duration) -> io::Result<bool> {
                                     app.dispatch_event(crate::models::tabs::TabEvent::Char(c));
                                 } else {
                                     match c {
+                                        '1'..='5' => {
+                                            let idx = c.to_digit(10).unwrap() as usize - 1;
+                                            app.set_tab(idx);
+                                        },
                                         'q' => app.quit(),
                                         's' => {
                                             if app.current_tab == crate::models::tabs::Tab::Timer {

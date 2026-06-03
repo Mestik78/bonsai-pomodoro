@@ -9,7 +9,6 @@ use ratatui::{
 use crate::app::App;
 use crate::models::timer::TimerSession;
 use crate::models::history::{HistoryLevel, NavDir};
-use crate::models::tile::{Tile, PlantTile};
 use crate::bonsai;
 
 
@@ -44,7 +43,8 @@ pub fn render(frame: &mut Frame, app: &mut App, inner_area: Rect) {
     let mut current_line: usize = 0;
     
     let available_width = if app.history.level == HistoryLevel::Bonsai {
-        let prev_width = 20.max((inner_area.width as f32 * 0.45) as u16);
+        let base_width = (inner_area.width as f32 * 0.50) as u16;
+        let prev_width = base_width.clamp(10, crate::bonsai::scale::SCALES[0].min_width + 10);
         inner_area.width.saturating_sub(prev_width) as usize
     } else {
         inner_area.width as usize
@@ -188,7 +188,8 @@ pub fn render(frame: &mut Frame, app: &mut App, inner_area: Rect) {
         .style(Style::default().fg(Color::White));
         
     if app.history.level == HistoryLevel::Bonsai {
-        let prev_width = 20.max((inner_area.width as f32 * 0.45) as u16);
+        let base_width = (inner_area.width as f32 * 0.50) as u16;
+        let prev_width = base_width.clamp(10, crate::bonsai::scale::SCALES[0].min_width + 10);
         let list_width = inner_area.width.saturating_sub(prev_width);
         
         let chunks = Layout::default()

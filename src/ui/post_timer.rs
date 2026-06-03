@@ -6,7 +6,6 @@ use ratatui::{
 };
 
 use crate::app::App;
-use crate::models::tile::{Tile, PlantTile};
 
 pub fn render(frame: &mut Frame, app: &App, inner_area: Rect, title: &str, description: &str, focus: u8) {
     let horiz_chunks = Layout::default()
@@ -49,13 +48,7 @@ pub fn render(frame: &mut Frame, app: &App, inner_area: Rect, title: &str, descr
     let canvas = crate::models::plant::generate_plant(&plant);
     
     let plant_frame = crate::bonsai::PlantFrame::new(Some(0), None);
-    let tile = PlantTile {
-        canvas: &canvas,
-        frame: plant_frame,
-        label: None,
-        pot_color: None,
-    };
-    let bonsai_lines = tile.render(horiz_chunks[1].width, horiz_chunks[1].height);
+    let bonsai_lines = plant_frame.render(&canvas, horiz_chunks[1].width, horiz_chunks[1].height, None, None);
     
     let bonsai_p = Paragraph::new(bonsai_lines.clone())
         .alignment(Alignment::Center);

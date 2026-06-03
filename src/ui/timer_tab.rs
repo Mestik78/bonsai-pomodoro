@@ -9,7 +9,6 @@ use tui_big_text::{BigText, PixelSize};
 
 use crate::app::{App, AppMode};
 use crate::models::timer::TimerState;
-use crate::models::tile::{Tile, PlantTile};
 use crate::bonsai;
 
 pub fn render(frame: &mut Frame, app: &App, inner_area: Rect) {
@@ -78,13 +77,7 @@ pub fn render(frame: &mut Frame, app: &App, inner_area: Rect) {
     }
     
     let plant_frame = bonsai::PlantFrame::new(Some(0), None);
-    let tile = PlantTile {
-        canvas: &canvas,
-        frame: plant_frame,
-        label: None,
-        pot_color: None,
-    };
-    let bonsai_lines = tile.render(inner_area.width, inner_area.height);
+    let bonsai_lines = plant_frame.render(&canvas, inner_area.width, inner_area.height, None, None);
     
     let bonsai_p = Paragraph::new(bonsai_lines.clone())
         .alignment(Alignment::Center);

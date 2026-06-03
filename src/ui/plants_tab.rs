@@ -8,7 +8,6 @@ use ratatui::{
 
 use crate::app::App;
 use crate::models::plant::{Plant, generate_plant};
-use crate::models::tile::{Tile, PlantTile};
 use crate::bonsai::PlantFrame;
 
 pub fn render(frame: &mut Frame, app: &mut App, area: Rect) {
