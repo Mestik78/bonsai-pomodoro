@@ -84,7 +84,7 @@ pub fn handle_event(app: &mut App, tick_rate: Duration) -> io::Result<bool> {
                                         let idx = c.to_digit(10).unwrap() as usize - 1;
                                         app.set_tab(idx);
                                     },
-                                    KeyCode::Char('p') => {
+                                    KeyCode::Char('b') => {
                                         if app.current_tab == crate::models::tabs::Tab::Timer {
                                             if app.timers[0].state == Some(crate::models::timer::TimerState::New) {
                                                 app.is_selecting_plant = true;

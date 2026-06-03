@@ -157,11 +157,11 @@ pub fn render(frame: &mut Frame, app: &App, inner_area: Rect) {
     let help_text = if app.is_selecting_plant {
         "Enter: Confirm | r: Reroll seed | Up/Down: Select"
     } else if inner_area.width < 31 {
-        "s: Select Plant | Space: Start/Pause"
+        "b: Select Plant | Space: Start/Pause"
     } else if inner_area.width < 52 {
-        "s: Select Plant | Space: Start/Pause | Up/Down: Time"
+        "b: Select Plant | Space: Start/Pause | Up/Down: Time"
     } else {
-        "s: Select Plant | Space: Pause/Resume | Up/Down: Time | Left/Right: Tab"
+        "b: Select Plant | Space: Pause/Resume | Up/Down: Time | Left/Right: Tab"
     };
     let help_p = Paragraph::new(Span::styled(help_text, Style::default().fg(Color::DarkGray)))
         .alignment(Alignment::Center);
