@@ -27,13 +27,7 @@ pub fn render(frame: &mut Frame, app: &mut App, area: Rect) {
 
         for scale_idx in 0..3 {
             let plant_frame = PlantFrame::new(Some(scale_idx), Some(scale_idx));
-            let tile = PlantTile {
-                canvas: &canvas,
-                frame: plant_frame,
-                label: None,
-                pot_color: None,
-            };
-            let lines = tile.render(100, 100);
+            let lines = plant_frame.render(&canvas, 100, 100, None, None);
             
             let w = lines.iter().map(|l| l.spans.iter().map(|s| s.content.chars().count()).sum::<usize>()).max().unwrap_or(0) as u16;
             let h = lines.len() as u16;
@@ -120,13 +114,7 @@ pub fn render(frame: &mut Frame, app: &mut App, area: Rect) {
         let plant = Plant::new(state.seed, p_type.clone(), state.animation_progress);
         let canvas = generate_plant(&plant);
         let plant_frame = PlantFrame::new(Some(1), None);
-        let tile = PlantTile {
-            canvas: &canvas,
-            frame: plant_frame,
-            label: None,
-            pot_color,
-        };
-        let mini_lines = tile.render(top_right_inner.width, target_tree_height as u16);
+        let mini_lines = plant_frame.render(&canvas, top_right_inner.width, target_tree_height as u16, None, pot_color);
 
         let mut block_lines = Vec::new();
         let pad_count = target_tree_height.saturating_sub(mini_lines.len());
