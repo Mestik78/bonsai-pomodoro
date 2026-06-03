@@ -17,6 +17,8 @@ pub struct ForestState {
     pub search_matches: Vec<(i32, i32)>,
     #[serde(skip)]
     pub search_index: usize,
+    #[serde(skip)]
+    pub is_movement_mode: bool,
 }
 
 impl ForestState {
@@ -28,6 +30,7 @@ impl ForestState {
             search_query: String::new(),
             search_matches: Vec::new(),
             search_index: 0,
+            is_movement_mode: false,
         }
     }
     
@@ -74,18 +77,63 @@ impl ForestState {
             }
         } else {
             match event {
-                TabEvent::Up { .. } => { self.tilemap.pan(0, 1); EventResult::Consumed },
-                TabEvent::Down { .. } => { self.tilemap.pan(0, -1); EventResult::Consumed },
-                TabEvent::Left => { self.tilemap.pan(-2, 0); EventResult::Consumed },
-                TabEvent::Right => { self.tilemap.pan(2, 0); EventResult::Consumed },
+                TabEvent::Up { .. } => {
+                    if self.is_movement_mode {
+                        self.tilemap.pan(0, 1);
+                        EventResult::Consumed
+                    } else {
+                        EventResult::Ignored
+                    }
+                },
+                TabEvent::Down { .. } => {
+                    if self.is_movement_mode {
+                        self.tilemap.pan(0, -1);
+                        EventResult::Consumed
+                    } else {
+                        EventResult::Ignored
+                    }
+                },
+                TabEvent::Left => {
+                    if self.is_movement_mode {
+                        self.tilemap.pan(-2, 0);
+                        EventResult::Consumed
+                    } else {
+                        EventResult::Ignored
+                    }
+                },
+                TabEvent::Right => {
+                    if self.is_movement_mode {
+                        self.tilemap.pan(2, 0);
+                        EventResult::Consumed
+                    } else {
+                        EventResult::Ignored
+                    }
+                },
+                TabEvent::Enter => {
+                    self.is_movement_mode = true;
+                    EventResult::Consumed
+                },
                 TabEvent::ZoomIn => { self.tilemap.zoom_in(); EventResult::Consumed },
                 TabEvent::ZoomOut => { self.tilemap.zoom_out(); EventResult::Consumed },
                 TabEvent::Esc => { 
-                    self.search_matches.clear();
-                    EventResult::Consumed 
+                    let mut consumed = false;
+                    if !self.search_matches.is_empty() {
+                        self.search_matches.clear();
+                        consumed = true;
+                    }
+                    if self.is_movement_mode {
+                        self.is_movement_mode = false;
+                        consumed = true;
+                    }
+                    if consumed {
+                        EventResult::Consumed
+                    } else {
+                        EventResult::Ignored
+                    }
                 },
                 TabEvent::SearchStart => {
                     self.is_searching = true;
+                    self.is_movement_mode = false;
                     self.search_query.clear();
                     self.search_matches.clear();
                     EventResult::Consumed

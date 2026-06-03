@@ -76,8 +76,12 @@ impl HistoryState {
                 EventResult::Consumed
             },
             TabEvent::Esc => {
-                self.escape();
-                EventResult::Consumed
+                if self.level == HistoryLevel::Bonsai {
+                    self.escape();
+                    EventResult::Consumed
+                } else {
+                    EventResult::Ignored
+                }
             },
             TabEvent::ZoomIn | TabEvent::ZoomOut => EventResult::Ignored,
             _ => EventResult::Ignored,

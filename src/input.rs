@@ -9,90 +9,107 @@ pub fn handle_event(app: &mut App, tick_rate: Duration) -> io::Result<bool> {
             if key.kind == KeyEventKind::Press {
                 match app.mode {
                     AppMode::Normal => {
-                        match key.code {
-                            KeyCode::Left => {
+                        if app.current_tab == crate::models::tabs::Tab::Forest && app.forest.is_searching {
+                            match key.code {
+                                KeyCode::Char(c) => { let _ = app.dispatch_event(crate::models::tabs::TabEvent::Char(c)); },
+                                KeyCode::Backspace => { let _ = app.dispatch_event(crate::models::tabs::TabEvent::Backspace); },
+                                KeyCode::Enter => { let _ = app.dispatch_event(crate::models::tabs::TabEvent::Enter); },
+                                KeyCode::Esc => { let _ = app.dispatch_event(crate::models::tabs::TabEvent::Esc); },
+                                _ => {}
+                            }
+                        } else {
+                            let mut is_up = false;
+                            let mut is_down = false;
+                            let mut is_left = false;
+                            let mut is_right = false;
+                            let mut is_accept = false;
+                            let mut is_back = false;
+
+                            match key.code {
+                                KeyCode::Up | KeyCode::Char('k') | KeyCode::Char('w') => is_up = true,
+                                KeyCode::Down | KeyCode::Char('j') | KeyCode::Char('s') => is_down = true,
+                                KeyCode::Left | KeyCode::Char('h') | KeyCode::Char('a') => is_left = true,
+                                KeyCode::Right | KeyCode::Char('l') | KeyCode::Char('d') => is_right = true,
+                                KeyCode::Enter | KeyCode::Char(' ') => is_accept = true,
+                                KeyCode::Esc | KeyCode::Char('q') => is_back = true,
+                                _ => {}
+                            }
+
+                            if is_left {
                                 if key.modifiers.contains(KeyModifiers::SHIFT) {
                                     app.previous_tab();
-                                } else {
-                                    app.dispatch_event(crate::models::tabs::TabEvent::Left);
+                                } else if matches!(app.dispatch_event(crate::models::tabs::TabEvent::Left), crate::models::tabs::EventResult::Ignored) {
+                                    app.previous_tab();
                                 }
-                            },
-                            KeyCode::Right => {
+                            } else if is_right {
                                 if key.modifiers.contains(KeyModifiers::SHIFT) {
                                     app.next_tab();
-                                } else {
-                                    app.dispatch_event(crate::models::tabs::TabEvent::Right);
+                                } else if matches!(app.dispatch_event(crate::models::tabs::TabEvent::Right), crate::models::tabs::EventResult::Ignored) {
+                                    app.next_tab();
                                 }
-                            },
-                            KeyCode::Up => app.dispatch_event(crate::models::tabs::TabEvent::Up { is_ctrl: key.modifiers.contains(KeyModifiers::CONTROL) }),
-                            KeyCode::Down => app.dispatch_event(crate::models::tabs::TabEvent::Down { is_ctrl: key.modifiers.contains(KeyModifiers::CONTROL) }),
-                            KeyCode::Enter => app.dispatch_event(crate::models::tabs::TabEvent::Enter),
-                            KeyCode::Esc => app.dispatch_event(crate::models::tabs::TabEvent::Esc),
-                            KeyCode::Backspace => {
-                                if app.current_tab == crate::models::tabs::Tab::Forest && app.forest.is_searching {
-                                    app.dispatch_event(crate::models::tabs::TabEvent::Backspace);
-                                }
-                            },
-                            KeyCode::Char(c) => {
-                                if app.current_tab == crate::models::tabs::Tab::Forest && app.forest.is_searching {
-                                    app.dispatch_event(crate::models::tabs::TabEvent::Char(c));
-                                } else {
-                                    match c {
-                                        '[' => app.previous_tab(),
-                                        ']' => app.next_tab(),
-                                        '1'..='5' => {
-                                            let idx = c.to_digit(10).unwrap() as usize - 1;
-                                            app.set_tab(idx);
-                                        },
-                                        'q' => app.quit(),
-                                        's' => {
-                                            if app.current_tab == crate::models::tabs::Tab::Timer {
-                                                if app.timers[0].state == Some(crate::models::timer::TimerState::New) {
-                                                    app.is_selecting_plant = true;
-                                                    app.timers[0].seed = rand::random();
-                                                }
-                                            }
-                                        },
-                                        ' ' => {
-                                            if app.current_tab == crate::models::tabs::Tab::Plants {
-                                                app.plants.toggle_animation();
-                                            } else if app.current_tab != crate::models::tabs::Tab::Timer || !app.is_selecting_plant {
-                                                app.toggle_timer();
-                                            }
-                                        },
-                                        'r' => {
-                                            if app.current_tab == crate::models::tabs::Tab::Timer {
-                                                if app.is_selecting_plant {
-                                                    app.timers[0].seed = rand::random();
-                                                } else {
-                                                    app.reset_timer();
-                                                }
-                                            } else if app.current_tab == crate::models::tabs::Tab::Plants {
-                                                app.plants.seed = rand::random();
-                                            }
-                                        },
-                                        'f' => {
-                                            if app.current_tab == crate::models::tabs::Tab::Timer && !app.is_selecting_plant {
-                                                app.finish_early();
-                                            }
-                                        },
-                                        '+' => app.dispatch_event(crate::models::tabs::TabEvent::ZoomIn),
-                                        '-' => app.dispatch_event(crate::models::tabs::TabEvent::ZoomOut),
-                                        '/' => {
-                                            if app.current_tab == crate::models::tabs::Tab::Forest {
-                                                app.dispatch_event(crate::models::tabs::TabEvent::SearchStart);
-                                            }
-                                        },
-                                        'n' => {
-                                            if app.current_tab == crate::models::tabs::Tab::Forest {
-                                                app.dispatch_event(crate::models::tabs::TabEvent::SearchNext);
-                                            }
-                                        },
-                                        _ => {}
+                            } else if is_up {
+                                let _ = app.dispatch_event(crate::models::tabs::TabEvent::Up { is_ctrl: key.modifiers.contains(KeyModifiers::CONTROL) });
+                            } else if is_down {
+                                let _ = app.dispatch_event(crate::models::tabs::TabEvent::Down { is_ctrl: key.modifiers.contains(KeyModifiers::CONTROL) });
+                            } else if is_accept {
+                                if matches!(app.dispatch_event(crate::models::tabs::TabEvent::Enter), crate::models::tabs::EventResult::Ignored) {
+                                    if app.current_tab == crate::models::tabs::Tab::Plants {
+                                        app.plants.toggle_animation();
+                                    } else if app.current_tab != crate::models::tabs::Tab::Timer || !app.is_selecting_plant {
+                                        app.toggle_timer();
                                     }
                                 }
-                            },
-                            _ => {}
+                            } else if is_back {
+                                if matches!(app.dispatch_event(crate::models::tabs::TabEvent::Esc), crate::models::tabs::EventResult::Ignored) {
+                                    app.quit();
+                                }
+                            } else {
+                                match key.code {
+                                    KeyCode::Char('[') => app.previous_tab(),
+                                    KeyCode::Char(']') => app.next_tab(),
+                                    KeyCode::Char(c @ '1'..='5') => {
+                                        let idx = c.to_digit(10).unwrap() as usize - 1;
+                                        app.set_tab(idx);
+                                    },
+                                    KeyCode::Char('p') => {
+                                        if app.current_tab == crate::models::tabs::Tab::Timer {
+                                            if app.timers[0].state == Some(crate::models::timer::TimerState::New) {
+                                                app.is_selecting_plant = true;
+                                                app.timers[0].seed = rand::random();
+                                            }
+                                        }
+                                    },
+                                    KeyCode::Char('r') => {
+                                        if app.current_tab == crate::models::tabs::Tab::Timer {
+                                            if app.is_selecting_plant {
+                                                app.timers[0].seed = rand::random();
+                                            } else {
+                                                app.reset_timer();
+                                            }
+                                        } else if app.current_tab == crate::models::tabs::Tab::Plants {
+                                            app.plants.seed = rand::random();
+                                        }
+                                    },
+                                    KeyCode::Char('f') => {
+                                        if app.current_tab == crate::models::tabs::Tab::Timer && !app.is_selecting_plant {
+                                            app.finish_early();
+                                        }
+                                    },
+                                    KeyCode::Char('+') => { let _ = app.dispatch_event(crate::models::tabs::TabEvent::ZoomIn); },
+                                    KeyCode::Char('-') => { let _ = app.dispatch_event(crate::models::tabs::TabEvent::ZoomOut); },
+                                    KeyCode::Char('/') => {
+                                        if app.current_tab == crate::models::tabs::Tab::Forest {
+                                            let _ = app.dispatch_event(crate::models::tabs::TabEvent::SearchStart);
+                                        }
+                                    },
+                                    KeyCode::Char('n') => {
+                                        if app.current_tab == crate::models::tabs::Tab::Forest {
+                                            let _ = app.dispatch_event(crate::models::tabs::TabEvent::SearchNext);
+                                        }
+                                    },
+                                    _ => {}
+                                }
+                            }
                         }
                     },
                     AppMode::PostTimerInput { .. } => {

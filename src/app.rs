@@ -313,14 +313,14 @@ impl App {
         }
     }
 
-    pub fn dispatch_event(&mut self, event: crate::models::tabs::TabEvent) {
+    pub fn dispatch_event(&mut self, event: crate::models::tabs::TabEvent) -> crate::models::tabs::EventResult {
         use crate::models::tabs::{Tab, EventResult};
-        let _ = match self.current_tab {
+        match self.current_tab {
             Tab::Timer => self.handle_timer_event(&event),
             Tab::History => self.history.handle_event(&event, &self.timers),
             Tab::Forest => self.forest.handle_event(&event),
             Tab::Stats => self.stats.handle_event(&event),
             Tab::Plants => self.plants.handle_event(&event),
-        };
+        }
     }
 }
