@@ -125,21 +125,17 @@ pub fn render(frame: &mut Frame, app: &mut App, inner_area: Rect) {
                 let selected_row = app.history.selected_bonsai / cols;
                 if row_idx == selected_row {
                     let list_height = inner_area.height as usize;
-                    if selected_row == 0 {
-                        if app.history.last_nav_dir == NavDir::Down {
-                            let block_height = current_line - day_start_line;
-                            if block_height <= list_height {
-                                target_line_idx = current_line.saturating_sub(1);
-                            } else {
-                                target_line_idx = day_start_line + list_height.saturating_sub(1);
-                            }
-                        } else {
-                            target_line_idx = day_start_line;
-                        }
-                    } else if app.history.last_nav_dir == NavDir::Down {
-                        target_line_idx = current_line + max_height.saturating_sub(1);
+                    let block_start = current_line;
+                    let block_end = current_line + max_height.saturating_sub(1);
+                    
+                    let offset = app.history.list_state.offset();
+                    
+                    if block_end >= offset + list_height {
+                        target_line_idx = block_end;
+                    } else if block_start < offset {
+                        target_line_idx = block_start;
                     } else {
-                        target_line_idx = current_line;
+                        target_line_idx = block_start;
                     }
                 }
             }

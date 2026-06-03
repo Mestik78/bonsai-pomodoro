@@ -170,24 +170,34 @@ impl App {
     }
 
     pub fn next_tab(&mut self) {
+        if self.current_tab == crate::models::tabs::Tab::History {
+            self.history.escape();
+        }
         self.current_tab = self.current_tab.next(self.is_production);
     }
 
     pub fn previous_tab(&mut self) {
+        if self.current_tab == crate::models::tabs::Tab::History {
+            self.history.escape();
+        }
         self.current_tab = self.current_tab.previous(self.is_production);
     }
 
     pub fn set_tab(&mut self, index: usize) {
         let num_tabs = if self.is_production { 4 } else { 5 };
         if index < num_tabs {
-            self.current_tab = match index {
-                0 => Tab::Timer,
-                1 => Tab::History,
-                2 => Tab::Forest,
-                3 => Tab::Stats,
-                4 => Tab::Plants,
+            let next_tab = match index {
+                0 => crate::models::tabs::Tab::Timer,
+                1 => crate::models::tabs::Tab::History,
+                2 => crate::models::tabs::Tab::Forest,
+                3 => crate::models::tabs::Tab::Stats,
+                4 => crate::models::tabs::Tab::Plants,
                 _ => self.current_tab,
             };
+            if self.current_tab == crate::models::tabs::Tab::History && next_tab != crate::models::tabs::Tab::History {
+                self.history.escape();
+            }
+            self.current_tab = next_tab;
         }
     }
 

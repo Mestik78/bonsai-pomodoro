@@ -62,6 +62,7 @@ pub fn handle_event(app: &mut App, tick_rate: Duration) -> io::Result<bool> {
                                         }
                                     },
                                     crate::models::tabs::EventResult::JumpToForest(idx) => {
+                                        app.history.escape();
                                         app.current_tab = crate::models::tabs::Tab::Forest;
                                         app.forest.center_on_timer(idx);
                                     },
