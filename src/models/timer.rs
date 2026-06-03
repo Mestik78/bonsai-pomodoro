@@ -108,16 +108,20 @@ impl TimerSession {
         t
     }
 
+    pub fn elapsed(&self) -> u64 {
+        if self.state.is_none() {
+            self.actual_runtime.unwrap_or(self.duration)
+        } else {
+            self.duration.saturating_sub(self.time_left.unwrap_or(self.duration))
+        }
+    }
+
     pub fn progress(&self) -> f32 {
         if self.state == Some(TimerState::New) || matches!(self.state, Some(TimerState::Starting(_))) {
             return 0.0;
         }
         
-        let actual = if self.state.is_none() {
-            self.actual_runtime.unwrap_or(self.duration)
-        } else {
-            self.duration.saturating_sub(self.time_left.unwrap_or(self.duration))
-        };
+        let actual = self.elapsed();
         
         let d = (actual as f64).max(0.0);
         let x = (d / 3000.0).clamp(0.0, 1.0);

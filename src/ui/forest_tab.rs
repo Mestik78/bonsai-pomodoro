@@ -156,7 +156,7 @@ pub fn render(frame: &mut Frame, app: &App, inner_area: Rect) {
                     let lines = match state.forest_map.grid.get(&(col, row)).copied() {
                         Some(crate::models::forest_map::MapElement::Plant(idx)) => {
                             let t = &app.timers[idx];
-                            let canvas = crate::models::plant::generate_plant(&crate::models::plant::Plant::new(t.seed, t.plant_type.clone(), 1.0));
+                            let canvas = crate::models::plant::generate_plant(&crate::models::plant::Plant::from_timer(t));
                             
                             let pot_color = if is_center {
                                 Some(ratatui::style::Color::Yellow)
@@ -164,10 +164,11 @@ pub fn render(frame: &mut Frame, app: &App, inner_area: Rect) {
                                 None
                             };
 
+                            let elapsed = t.elapsed();
                             let tile = PlantTile {
                                 canvas: &canvas,
                                 frame: plant_frame.clone(),
-                                label: Some(format!("{:02}:{:02}", t.duration / 60, t.duration % 60)),
+                                label: Some(format!("{:02}:{:02}", elapsed / 60, elapsed % 60)),
                                 pot_color,
                             };
                             tile.render(tile_w, tile_h)
