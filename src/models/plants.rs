@@ -9,7 +9,7 @@ pub struct PlantsState {
     pub is_animating: bool,
     pub animation_progress: f32,
     pub last_tick: Option<std::time::Instant>,
-    pub plant_types: Vec<(&'static str, PlantType)>,
+    pub plant_types: Vec<(String, PlantType)>,
 }
 
 impl PlantsState {
@@ -22,12 +22,7 @@ impl PlantsState {
             is_animating: false,
             animation_progress: 1.0,
             last_tick: None,
-            plant_types: vec![
-                ("Bonsai", PlantType::Bonsai),
-                ("LemonTree", PlantType::LemonTree),
-                ("Cactus", PlantType::Cactus),
-                ("Bush", PlantType::Bush),
-            ],
+            plant_types: PlantType::all().into_iter().map(|pt| (pt.to_string(), pt)).collect(),
         }
     }
 

@@ -18,6 +18,8 @@ impl Fruit {
 pub enum PlantType {
     Bonsai,
     LemonTree,
+    AppleTree,
+    OrangeTree,
     Cactus,
     Bush,
 }
@@ -30,13 +32,15 @@ impl Default for PlantType {
 
 impl PlantType {
     pub fn all() -> Vec<PlantType> {
-        vec![PlantType::Bonsai, PlantType::Cactus, PlantType::LemonTree, PlantType::Bush]
+        vec![PlantType::Bonsai, PlantType::Cactus, PlantType::LemonTree, PlantType::AppleTree, PlantType::OrangeTree, PlantType::Bush]
     }
     
     pub fn to_string(&self) -> String {
         match self {
             PlantType::Bonsai => "Bonsai".to_string(),
             PlantType::LemonTree => "Lemon Tree".to_string(),
+            PlantType::AppleTree => "Apple Tree".to_string(),
+            PlantType::OrangeTree => "Orange Tree".to_string(),
             PlantType::Cactus => "Cactus".to_string(),
             PlantType::Bush => "Bush".to_string(),
         }
@@ -77,6 +81,14 @@ pub fn generate_plant(plant: &Plant) -> bonsai::canvas::BonsaiCanvas {
         PlantType::LemonTree => {
             let lemon = Fruit::new('●', Color::Rgb(255, 244, 79));
             bonsai::generate_bonsai(plant.seed, plant.progress, Some(lemon), 4)
+        },
+        PlantType::AppleTree => {
+            let apple = Fruit::new('●', Color::Rgb(220, 20, 60)); // Crimson Red
+            bonsai::generate_bonsai(plant.seed, plant.progress, Some(apple), 4)
+        },
+        PlantType::OrangeTree => {
+            let orange = Fruit::new('●', Color::Rgb(255, 165, 0)); // Orange
+            bonsai::generate_bonsai(plant.seed, plant.progress, Some(orange), 4)
         }
     }
 }

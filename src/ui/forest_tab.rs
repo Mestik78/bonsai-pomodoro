@@ -134,40 +134,51 @@ pub fn render(frame: &mut Frame, app: &App, inner_area: Rect) {
             let is_center = col == (map.camera_x + (tile_w as i32) / 2).div_euclid(tile_w as i32)
                          && row == (map.camera_y + (tile_h as i32) / 2).div_euclid(tile_h as i32);
                          
-            let mut neighbors = [[false; 3]; 3];
-            for dy in -1..=1 {
-                for dx in -1..=1 {
-                    let nx = col + dx;
-                    let ny = row + dy;
-                    neighbors[(1 - dy) as usize][(dx + 1) as usize] = matches!(
-                        state.forest_map.grid.get(&(nx, ny)),
-                        Some(crate::models::forest_map::MapElement::Path) | Some(crate::models::forest_map::MapElement::Plant(_))
-                    );
-                }
-            }
+            let cache_key = (col, row, map.current_zoom, is_center);
             
-            let tile_lines = match state.forest_map.grid.get(&(col, row)).copied() {
-                Some(crate::models::forest_map::MapElement::Plant(idx)) => {
-                    let t = &app.timers[idx];
-                    let canvas = crate::models::plant::generate_plant(&crate::models::plant::Plant::new(t.seed, t.plant_type.clone(), 1.0));
+            let tile_lines = {
+                let mut state_cache = state.tile_cache.borrow_mut();
+                if let Some(cached) = state_cache.get(&cache_key) {
+                    cached.clone()
+                } else {
+                    let mut neighbors = [[false; 3]; 3];
+                    for dy in -1..=1 {
+                        for dx in -1..=1 {
+                            let nx = col + dx;
+                            let ny = row + dy;
+                            neighbors[(1 - dy) as usize][(dx + 1) as usize] = matches!(
+                                state.forest_map.grid.get(&(nx, ny)),
+                                Some(crate::models::forest_map::MapElement::Path) | Some(crate::models::forest_map::MapElement::Plant(_))
+                            );
+                        }
+                    }
                     
-                    let pot_color = if is_center {
-                        Some(ratatui::style::Color::Yellow)
-                    } else {
-                        None
-                    };
+                    let lines = match state.forest_map.grid.get(&(col, row)).copied() {
+                        Some(crate::models::forest_map::MapElement::Plant(idx)) => {
+                            let t = &app.timers[idx];
+                            let canvas = crate::models::plant::generate_plant(&crate::models::plant::Plant::new(t.seed, t.plant_type.clone(), 1.0));
+                            
+                            let pot_color = if is_center {
+                                Some(ratatui::style::Color::Yellow)
+                            } else {
+                                None
+                            };
 
-                    let tile = PlantTile {
-                        canvas: &canvas,
-                        frame: plant_frame.clone(),
-                        label: Some(format!("{:02}:{:02}", t.duration / 60, t.duration % 60)),
-                        pot_color,
+                            let tile = PlantTile {
+                                canvas: &canvas,
+                                frame: plant_frame.clone(),
+                                label: Some(format!("{:02}:{:02}", t.duration / 60, t.duration % 60)),
+                                pot_color,
+                            };
+                            tile.render(tile_w, tile_h)
+                        },
+                        Some(crate::models::forest_map::MapElement::Path) | _ => {
+                            let tile = crate::models::tile::TerrainTile { neighbors };
+                            tile.render(tile_w, tile_h)
+                        }
                     };
-                    tile.render(tile_w, tile_h)
-                },
-                Some(crate::models::forest_map::MapElement::Path) | _ => {
-                    let tile = crate::models::tile::TerrainTile { neighbors };
-                    tile.render(tile_w, tile_h)
+                    state_cache.insert(cache_key, lines.clone());
+                    lines
                 }
             };
             tile_cache.insert((row, col), tile_lines);

@@ -270,9 +270,27 @@ impl BonsaiCanvas {
     }
 
     pub fn render_micro(&self, _label: Option<String>, _pot_color: Option<Color>) -> Vec<ratatui::text::Line<'static>> {
+        let mut best_cell: Option<(&(i32, i32), &BonsaiCell)> = None;
+        
+        for (pos, cell) in self.cells.iter() {
+            if let Some((best_pos, best_c)) = best_cell {
+                if cell.element_type > best_c.element_type {
+                    best_cell = Some((pos, cell));
+                } else if cell.element_type == best_c.element_type {
+                    if pos > best_pos {
+                        best_cell = Some((pos, cell));
+                    }
+                }
+            } else {
+                best_cell = Some((pos, cell));
+            }
+        }
+        
+        let best_color = best_cell.map(|(_, c)| c.color).unwrap_or(Color::Green);
+        
         vec![
             ratatui::text::Line::from(vec![
-                ratatui::text::Span::styled("♣", ratatui::style::Style::default().fg(Color::Green)),
+                ratatui::text::Span::styled("♣", ratatui::style::Style::default().fg(best_color)),
                 ratatui::text::Span::raw(" "),
             ])
         ]

@@ -24,7 +24,8 @@ pub fn render(frame: &mut Frame, app: &mut App, area: Rect) {
         let plant = Plant::new(state.seed, p_type.clone(), state.animation_progress);
         let canvas = generate_plant(&plant);
 
-        for scale_idx in 0..3 {
+        let scales_count = crate::bonsai::scale::SCALES.len();
+        for scale_idx in 0..scales_count {
             let plant_frame = PlantFrame::new(Some(scale_idx), Some(scale_idx));
             let lines = plant_frame.render(&canvas, 100, 100, None, None);
             
@@ -166,7 +167,8 @@ pub fn render(frame: &mut Frame, app: &mut App, area: Rect) {
 
         // Margin between sizes
         let margin = 4;
-        total_sizes_width += margin * 2; // two margins between 3 items
+        let num_sizes = rendered_sizes.len() as u16;
+        total_sizes_width += margin * (num_sizes.saturating_sub(1)); // margin between items
 
         // Calculate center layout
         let padding_left = bottom_inner.width.saturating_sub(total_sizes_width) / 2;
@@ -189,16 +191,18 @@ pub fn render(frame: &mut Frame, app: &mut App, area: Rect) {
 
         let sizes_area = v_align_chunks[1];
 
-        // Split the sizes area into the 3 items with margins
+        // Split the sizes area into the items with margins
+        let mut constraints = Vec::new();
+        for (i, &(_, w, _)) in rendered_sizes.iter().enumerate() {
+            constraints.push(Constraint::Length(w));
+            if i < rendered_sizes.len() - 1 {
+                constraints.push(Constraint::Length(margin));
+            }
+        }
+        
         let items_chunks = Layout::default()
             .direction(Direction::Horizontal)
-            .constraints([
-                Constraint::Length(rendered_sizes[0].1),
-                Constraint::Length(margin),
-                Constraint::Length(rendered_sizes[1].1),
-                Constraint::Length(margin),
-                Constraint::Length(rendered_sizes[2].1),
-            ])
+            .constraints(constraints)
             .split(sizes_area);
 
         for (idx, (lines, _w, h)) in rendered_sizes.into_iter().enumerate() {

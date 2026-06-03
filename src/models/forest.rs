@@ -19,6 +19,8 @@ pub struct ForestState {
     pub search_index: usize,
     #[serde(skip)]
     pub is_movement_mode: bool,
+    #[serde(skip)]
+    pub tile_cache: std::cell::RefCell<std::collections::HashMap<(i32, i32, usize, bool), Vec<ratatui::text::Line<'static>>>>,
 }
 
 impl ForestState {
@@ -31,11 +33,13 @@ impl ForestState {
             search_matches: Vec::new(),
             search_index: 0,
             is_movement_mode: false,
+            tile_cache: std::cell::RefCell::new(std::collections::HashMap::new()),
         }
     }
     
     pub fn rebuild_map(&mut self, timers: &[crate::models::timer::TimerSession], global_seed: u64) {
         self.forest_map = ForestMap::build(timers, global_seed);
+        self.tile_cache.borrow_mut().clear();
     }
 
     pub fn center_on_timer(&mut self, timer_idx: usize) {
