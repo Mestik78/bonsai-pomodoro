@@ -80,6 +80,9 @@ impl App {
         
         let mut forest = ForestState::new();
         forest.rebuild_map(&timers, global_seed);
+        if let Some(idx) = timers.iter().position(|t| t.state.is_none()) {
+            forest.center_on_timer(idx);
+        }
 
         Self {
             current_tab: Tab::Timer,

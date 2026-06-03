@@ -8,7 +8,7 @@ use ratatui::{
 use std::collections::HashMap;
 
 use crate::app::App;
-use crate::models::tile::{Tile, PlantTile, EmptyTile, PathTile};
+use crate::models::tile::{Tile, PlantTile, TerrainTile};
 
 fn slice_line(line: &Line, skip: usize, take: usize) -> Line<'static> {
     let mut skipped = 0;
@@ -134,6 +134,18 @@ pub fn render(frame: &mut Frame, app: &App, inner_area: Rect) {
             let is_center = col == (map.camera_x + (tile_w as i32) / 2).div_euclid(tile_w as i32)
                          && row == (map.camera_y + (tile_h as i32) / 2).div_euclid(tile_h as i32);
                          
+            let mut neighbors = [[false; 3]; 3];
+            for dy in -1..=1 {
+                for dx in -1..=1 {
+                    let nx = col + dx;
+                    let ny = row + dy;
+                    neighbors[(1 - dy) as usize][(dx + 1) as usize] = matches!(
+                        state.forest_map.grid.get(&(nx, ny)),
+                        Some(crate::models::forest_map::MapElement::Path) | Some(crate::models::forest_map::MapElement::Plant(_))
+                    );
+                }
+            }
+            
             let tile_lines = match state.forest_map.grid.get(&(col, row)).copied() {
                 Some(crate::models::forest_map::MapElement::Plant(idx)) => {
                     let t = &app.timers[idx];
@@ -153,11 +165,9 @@ pub fn render(frame: &mut Frame, app: &App, inner_area: Rect) {
                     };
                     tile.render(tile_w, tile_h)
                 },
-                Some(crate::models::forest_map::MapElement::Path) => {
-                    PathTile.render(tile_w, tile_h)
-                },
-                _ => {
-                    EmptyTile.render(tile_w, tile_h)
+                Some(crate::models::forest_map::MapElement::Path) | _ => {
+                    let tile = crate::models::tile::TerrainTile { neighbors };
+                    tile.render(tile_w, tile_h)
                 }
             };
             tile_cache.insert((row, col), tile_lines);
