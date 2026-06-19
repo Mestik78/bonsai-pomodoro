@@ -22,6 +22,16 @@ pub enum PlantType {
     OrangeTree,
     Cactus,
     Bush,
+    Pine,
+    Bamboo,
+    Oak,
+    RedMaple,
+    WhiteBirch,
+    Willow,
+    Mushroom,
+    TallMushroom,
+    BrownMushroom,
+    Sakura,
 }
 
 impl Default for PlantType {
@@ -32,7 +42,13 @@ impl Default for PlantType {
 
 impl PlantType {
     pub fn all() -> Vec<PlantType> {
-        vec![PlantType::Bonsai, PlantType::Cactus, PlantType::LemonTree, PlantType::AppleTree, PlantType::OrangeTree, PlantType::Bush]
+        vec![
+            PlantType::Bonsai, PlantType::Cactus, PlantType::LemonTree, 
+            PlantType::AppleTree, PlantType::OrangeTree, PlantType::Bush,
+            PlantType::Pine, PlantType::Bamboo, PlantType::Oak,
+            PlantType::RedMaple, PlantType::WhiteBirch, PlantType::Willow,
+            PlantType::Mushroom, PlantType::TallMushroom, PlantType::BrownMushroom, PlantType::Sakura
+        ]
     }
     
     pub fn to_string(&self) -> String {
@@ -43,6 +59,16 @@ impl PlantType {
             PlantType::OrangeTree => "Orange Tree".to_string(),
             PlantType::Cactus => "Cactus".to_string(),
             PlantType::Bush => "Bush".to_string(),
+            PlantType::Pine => "Pine Tree".to_string(),
+            PlantType::Bamboo => "Bamboo".to_string(),
+            PlantType::Oak => "Oak Tree".to_string(),
+            PlantType::RedMaple => "Red Maple".to_string(),
+            PlantType::WhiteBirch => "White Birch".to_string(),
+            PlantType::Willow => "Weeping Willow".to_string(),
+            PlantType::Mushroom => "Red Mushroom".to_string(),
+            PlantType::TallMushroom => "Tall Mushroom".to_string(),
+            PlantType::BrownMushroom => "Brown Mushroom".to_string(),
+            PlantType::Sakura => "Sakura".to_string(),
         }
     }
 }
@@ -75,7 +101,6 @@ pub fn generate_plant(plant: &Plant) -> bonsai::canvas::BonsaiCanvas {
             bonsai::generate_cactus(plant.seed, plant.progress, Some(flower), 2)
         },
         PlantType::Bush => {
-            // The bush gets no fruit for now, or just the default.
             bonsai::generate_bush(plant.seed, plant.progress, None, 0)
         },
         PlantType::LemonTree => {
@@ -89,6 +114,19 @@ pub fn generate_plant(plant: &Plant) -> bonsai::canvas::BonsaiCanvas {
         PlantType::OrangeTree => {
             let orange = Fruit::new('●', Color::Rgb(255, 165, 0)); // Orange
             bonsai::generate_bonsai(plant.seed, plant.progress, Some(orange), 4)
+        },
+        PlantType::Pine => bonsai::generate_pine(plant.seed, plant.progress, None, 0),
+        PlantType::Bamboo => bonsai::generate_bamboo(plant.seed, plant.progress, None, 0),
+        PlantType::Oak => bonsai::generate_oak(plant.seed, plant.progress, None, 0),
+        PlantType::RedMaple => bonsai::generate_red_maple(plant.seed, plant.progress, None, 0),
+        PlantType::WhiteBirch => bonsai::generate_white_birch(plant.seed, plant.progress, None, 0),
+        PlantType::Willow => bonsai::generate_willow(plant.seed, plant.progress, None, 0),
+        PlantType::Mushroom => bonsai::generate_mushroom(plant.seed, plant.progress, None, 0),
+        PlantType::TallMushroom => bonsai::generate_tall_mushroom(plant.seed, plant.progress, None, 0),
+        PlantType::BrownMushroom => bonsai::generate_brown_mushroom(plant.seed, plant.progress, None, 0),
+        PlantType::Sakura => {
+            let blossom = Fruit::new('*', Color::Rgb(255, 183, 197));
+            bonsai::generate_bonsai(plant.seed, plant.progress, Some(blossom), 80)
         }
     }
 }

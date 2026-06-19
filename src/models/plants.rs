@@ -10,6 +10,7 @@ pub struct PlantsState {
     pub animation_progress: f32,
     pub last_tick: Option<std::time::Instant>,
     pub plant_types: Vec<(String, PlantType)>,
+    pub scroll_y: usize,
 }
 
 impl PlantsState {
@@ -23,6 +24,7 @@ impl PlantsState {
             animation_progress: 1.0,
             last_tick: None,
             plant_types: PlantType::all().into_iter().map(|pt| (pt.to_string(), pt)).collect(),
+            scroll_y: 0,
         }
     }
 
@@ -45,7 +47,7 @@ impl PlantsState {
                 let delta = now.duration_since(last).as_secs_f32();
                 self.last_tick = Some(now);
                 
-                self.animation_progress += delta / 25.0;
+                self.animation_progress += delta / 5.0;
                 if self.animation_progress >= 1.0 {
                     self.animation_progress = 1.0;
                     self.is_animating = false;
@@ -60,8 +62,12 @@ impl PlantsState {
     pub fn handle_event(&mut self, event: &TabEvent) -> EventResult {
         match event {
             TabEvent::Enter => {
-                self.is_selecting = true;
-                EventResult::Consumed
+                if !self.is_selecting {
+                    self.is_selecting = true;
+                    EventResult::Consumed
+                } else {
+                    EventResult::Ignored
+                }
             },
             TabEvent::ZoomIn | TabEvent::ZoomOut => EventResult::Ignored,
             TabEvent::Esc => {

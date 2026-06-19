@@ -2,7 +2,7 @@ use ratatui::{
     layout::{Constraint, Direction, Layout, Rect, Alignment},
     style::{Color, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, Paragraph, List, ListItem},
+    widgets::{Block, Borders, Paragraph},
     Frame,
 };
 
@@ -127,7 +127,7 @@ pub fn render(frame: &mut Frame, app: &mut App, area: Rect) {
         plant_blocks.push(block_lines);
     }
 
-    let mut list_items = Vec::new();
+    let mut all_lines = Vec::new();
     let max_grid_height = plant_blocks.iter().map(|b| b.len()).max().unwrap_or(0);
 
     for row_chunk in plant_blocks.chunks(cols) {
@@ -145,14 +145,29 @@ pub fn render(frame: &mut Frame, app: &mut App, area: Rect) {
                     combined_spans.push(Span::raw(" ".repeat(block_width)));
                 }
             }
-            list_items.push(ListItem::new(Line::from(combined_spans)));
+            all_lines.push(Line::from(combined_spans));
         }
-        list_items.push(ListItem::new(Line::from(""))); // Spacer between rows
+        all_lines.push(Line::from("")); // Spacer between rows
     }
 
-    let list = List::new(list_items)
-        .style(Style::default().fg(Color::White));
-    frame.render_widget(list, top_right_inner);
+    let row_height = max_grid_height + 1;
+    let selected_row = state.selected_index / state.cols.max(1);
+    let item_start_y = selected_row * row_height;
+    let item_end_y = item_start_y + row_height;
+    
+    let visible_height = top_right_inner.height as usize;
+    
+    if item_end_y > state.scroll_y + visible_height {
+        state.scroll_y = item_end_y.saturating_sub(visible_height);
+    }
+    if item_start_y < state.scroll_y {
+        state.scroll_y = item_start_y;
+    }
+
+    let paragraph = Paragraph::new(all_lines)
+        .style(Style::default().fg(Color::White))
+        .scroll((state.scroll_y as u16, 0));
+    frame.render_widget(paragraph, top_right_inner);
 
 
     // --- BOTTOM PANEL: Detail of selected plant ---

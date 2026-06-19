@@ -22,14 +22,21 @@ fn main() -> io::Result<()> {
         println!("  -h, --help       Show this help message and exit");
         println!("  --dev            Start the application in development mode");
         println!("  --bonsai         Draw a bonsai in the terminal and exit");
-        println!("  --seed <number>  Seed for generating the bonsai (used with --bonsai)");
+        println!("  --all-plants     Draw all available plants in the terminal and exit");
+        println!("  --plant <name>   Draw a specific plant in the terminal and exit (e.g. 'Oak Tree')");
+        println!("  --seed <number>  Seed for generating the bonsai (used with --bonsai/--all-plants)");
         println!("  --zoom <number>  Zoom level for the bonsai (used with --bonsai, default 1.0)");
+        println!("  --animated       Animate the growth of the plants");
         return Ok(());
     }
 
     let is_production = !args.contains(&"--dev".to_string());
     
-    if args.contains(&"--bonsai".to_string()) {
+        let is_bonsai_mode = args.contains(&"--bonsai".to_string()) 
+            || args.contains(&"--all-plants".to_string()) 
+            || args.iter().any(|a| a == "--plant");
+
+    if is_bonsai_mode {
         let seed = args.iter().position(|a| a == "--seed")
             .and_then(|i| args.get(i + 1))
             .and_then(|s| s.parse::<u64>().ok())
@@ -49,11 +56,31 @@ fn main() -> io::Result<()> {
             crate::bonsai::SCALES.iter().collect()
         };
             
-        let plant_types = vec![
-            crate::models::plant::PlantType::Bonsai,
-            crate::models::plant::PlantType::Cactus,
-            crate::models::plant::PlantType::LemonTree,
-        ];
+        let mut plant_types = Vec::new();
+        if args.contains(&"--all-plants".to_string()) {
+            plant_types = crate::models::plant::PlantType::all();
+        } else if let Some(idx) = args.iter().position(|a| a == "--plant") {
+            if let Some(name) = args.get(idx + 1) {
+                let name_lower = name.to_lowercase();
+                plant_types = crate::models::plant::PlantType::all()
+                    .into_iter()
+                    .filter(|p| p.to_string().to_lowercase() == name_lower)
+                    .collect();
+                if plant_types.is_empty() {
+                    println!("Plant type '{}' not found. Available plants:", name);
+                    for p in crate::models::plant::PlantType::all() {
+                        println!("  - {}", p.to_string());
+                    }
+                    return Ok(());
+                }
+            }
+        } else {
+            plant_types = vec![
+                crate::models::plant::PlantType::Bonsai,
+                crate::models::plant::PlantType::Cactus,
+                crate::models::plant::PlantType::LemonTree,
+            ];
+        }
 
         // Precalcular altura máxima para anclar la maceta
         let mut global_max_height = 0;
