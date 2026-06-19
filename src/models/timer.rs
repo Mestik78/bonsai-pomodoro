@@ -87,7 +87,7 @@ impl Into<TimerSessionData> for TimerSession {
 impl TimerSession {
     pub fn new(duration: u64, plant_type: PlantType) -> Self {
         let mut t = Self {
-            start_time: chrono::Utc::now().to_rfc3339(),
+            start_time: chrono::Local::now().to_rfc3339(),
             duration,
             state: Some(TimerState::New),
             time_left: Some(duration),
@@ -132,7 +132,15 @@ impl TimerSession {
         let state = self.state.clone();
         match state {
             Some(TimerState::New) => {
-                self.state = Some(TimerState::Starting(chrono::Utc::now().to_rfc3339()));
+                let now = chrono::Local::now().to_rfc3339();
+                self.start_time = now.clone();
+                self.state = Some(TimerState::Starting(now));
+                
+                use std::hash::{Hash, Hasher};
+                let mut hasher = std::collections::hash_map::DefaultHasher::new();
+                self.start_time.hash(&mut hasher);
+                self.seed = hasher.finish();
+                
                 *last_tick = std::time::Instant::now();
             },
             Some(TimerState::Paused) => {
@@ -202,7 +210,7 @@ impl TimerSession {
         let state_clone = self.state.clone();
         if let Some(TimerState::Starting(start_time_str)) = state_clone {
             if let Ok(start_time) = chrono::DateTime::parse_from_rfc3339(&start_time_str) {
-                let now = chrono::Utc::now();
+                let now = chrono::Local::now();
                 if now.signed_duration_since(start_time).num_milliseconds() >= 500 {
                     self.state = Some(TimerState::Running);
                     *last_tick = std::time::Instant::now();
