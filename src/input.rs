@@ -9,7 +9,9 @@ pub fn handle_event(app: &mut App, tick_rate: Duration) -> io::Result<bool> {
             if key.kind == KeyEventKind::Press {
                 match app.mode {
                     AppMode::Normal => {
-                        if app.current_tab == crate::models::tabs::Tab::Forest && app.forest.is_searching {
+                        let is_searching = (app.current_tab == crate::models::tabs::Tab::Forest && app.forest.is_searching) ||
+                                           (app.current_tab == crate::models::tabs::Tab::History && app.history.is_searching);
+                        if is_searching {
                             match key.code {
                                 KeyCode::Char(c) => { let _ = app.dispatch_event(crate::models::tabs::TabEvent::Char(c)); },
                                 KeyCode::Backspace => { let _ = app.dispatch_event(crate::models::tabs::TabEvent::Backspace); },
@@ -111,12 +113,12 @@ pub fn handle_event(app: &mut App, tick_rate: Duration) -> io::Result<bool> {
                                     KeyCode::Char('+') => { let _ = app.dispatch_event(crate::models::tabs::TabEvent::ZoomIn); },
                                     KeyCode::Char('-') => { let _ = app.dispatch_event(crate::models::tabs::TabEvent::ZoomOut); },
                                     KeyCode::Char('/') => {
-                                        if app.current_tab == crate::models::tabs::Tab::Forest {
+                                        if app.current_tab == crate::models::tabs::Tab::Forest || app.current_tab == crate::models::tabs::Tab::History {
                                             let _ = app.dispatch_event(crate::models::tabs::TabEvent::SearchStart);
                                         }
                                     },
                                     KeyCode::Char('n') => {
-                                        if app.current_tab == crate::models::tabs::Tab::Forest {
+                                        if app.current_tab == crate::models::tabs::Tab::Forest || app.current_tab == crate::models::tabs::Tab::History {
                                             let _ = app.dispatch_event(crate::models::tabs::TabEvent::SearchNext);
                                         }
                                     },

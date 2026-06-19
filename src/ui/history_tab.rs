@@ -13,12 +13,27 @@ use crate::bonsai;
 
 
 pub fn render(frame: &mut Frame, app: &mut App, inner_area: Rect) {
+    let mut title_text = " History ".to_string();
+    if app.history.is_searching {
+        title_text = format!(" /{}_ ", app.history.search_query);
+    } else if !app.history.search_matches.is_empty() {
+        title_text = format!(" Match {}/{} for '{}' (n to jump, Esc to clear) ", app.history.search_index + 1, app.history.search_matches.len(), app.history.search_query);
+    }
+    
+    let main_block = Block::default()
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(if app.history.is_searching { Color::Yellow } else { Color::DarkGray }))
+        .title(title_text);
+        
+    let history_area = main_block.inner(inner_area);
+    frame.render_widget(main_block, inner_area);
+    
     let finished_timers: Vec<&TimerSession> = app.timers.iter().filter(|t| t.state.is_none()).collect();
     if finished_timers.is_empty() {
         let p = Paragraph::new("You have no finished sessions yet.")
             .alignment(Alignment::Center)
             .block(Block::default().borders(Borders::ALL));
-        frame.render_widget(p, inner_area);
+        frame.render_widget(p, history_area);
         return;
     }
 
@@ -43,11 +58,11 @@ pub fn render(frame: &mut Frame, app: &mut App, inner_area: Rect) {
     let mut current_line: usize = 0;
     
     let available_width = if app.history.level == HistoryLevel::Bonsai {
-        let base_width = (inner_area.width as f32 * 0.50) as u16;
+        let base_width = (history_area.width as f32 * 0.50) as u16;
         let prev_width = base_width.clamp(10, crate::bonsai::scale::SCALES[0].min_width + 10);
-        inner_area.width.saturating_sub(prev_width) as usize
+        history_area.width.saturating_sub(prev_width) as usize
     } else {
-        inner_area.width as usize
+        history_area.width as usize
     };
 
     for (day_idx, date_str) in days_order.iter().enumerate() {
@@ -60,11 +75,29 @@ pub fn render(frame: &mut Frame, app: &mut App, inner_area: Rect) {
         
         let day_start_line = current_line;
         
+        let timers_for_day = days_map.get(date_str).unwrap();
+        
+        let total_secs_day: u64 = timers_for_day.iter().map(|t| t.actual_runtime.unwrap_or(t.duration)).sum();
+        let total_mins = total_secs_day / 60;
+        let total_hours = total_mins / 60;
+        let rem_mins = total_mins % 60;
+        
+        let time_str = if total_hours > 0 {
+            format!("─ {}h {:02}m ", total_hours, rem_mins)
+        } else {
+            format!("─ {}m ", total_mins)
+        };
+        
+        let left_dashes = 3;
+        let title_text = format!(" {} ", date_str);
+        
         // Title item
         let mut title_spans = vec![
-            Span::styled(format!(" {} ", date_str), title_style),
+            Span::styled("─".repeat(left_dashes), title_style),
+            Span::styled(title_text.clone(), title_style),
+            Span::styled(time_str.clone(), title_style),
         ];
-        let header_len = date_str.len() + 2;
+        let header_len = left_dashes + title_text.chars().count() + time_str.chars().count();
         let dashes_len = available_width.saturating_sub(header_len);
         title_spans.push(Span::styled("─".repeat(dashes_len), title_style));
         
@@ -74,7 +107,7 @@ pub fn render(frame: &mut Frame, app: &mut App, inner_area: Rect) {
         items.push(ListItem::new(Line::from(""))); // Spacer
         current_line += 1;
         
-        let timers_for_day = days_map.get(date_str).unwrap();
+
         
         let mut timer_blocks: Vec<Vec<Line>> = Vec::new();
         
@@ -124,7 +157,7 @@ pub fn render(frame: &mut Frame, app: &mut App, inner_area: Rect) {
             if is_selected && app.history.level == HistoryLevel::Bonsai {
                 let selected_row = app.history.selected_bonsai / cols;
                 if row_idx == selected_row {
-                    let list_height = inner_area.height as usize;
+                    let list_height = history_area.height as usize;
                     let block_start = current_line;
                     let block_end = current_line + max_height.saturating_sub(1);
                     
@@ -164,7 +197,7 @@ pub fn render(frame: &mut Frame, app: &mut App, inner_area: Rect) {
         }
         
         if is_selected && app.history.level == HistoryLevel::Day {
-            let list_height = inner_area.height as usize;
+            let list_height = history_area.height as usize;
             if app.history.last_nav_dir == NavDir::Down {
                 let day_height = current_line - day_start_line;
                 if day_height <= list_height {
@@ -184,14 +217,14 @@ pub fn render(frame: &mut Frame, app: &mut App, inner_area: Rect) {
         .style(Style::default().fg(Color::White));
         
     if app.history.level == HistoryLevel::Bonsai {
-        let base_width = (inner_area.width as f32 * 0.50) as u16;
+        let base_width = (history_area.width as f32 * 0.50) as u16;
         let prev_width = base_width.clamp(10, crate::bonsai::scale::SCALES[0].min_width + 10);
-        let list_width = inner_area.width.saturating_sub(prev_width);
+        let list_width = history_area.width.saturating_sub(prev_width);
         
         let chunks = Layout::default()
             .direction(Direction::Horizontal)
             .constraints([Constraint::Length(list_width), Constraint::Length(prev_width)])
-            .split(inner_area);
+            .split(history_area);
             
         frame.render_stateful_widget(list, chunks[0], &mut app.history.list_state);
         
@@ -268,6 +301,6 @@ pub fn render(frame: &mut Frame, app: &mut App, inner_area: Rect) {
             }
         }
     } else {
-        frame.render_stateful_widget(list, inner_area, &mut app.history.list_state);
+        frame.render_stateful_widget(list, history_area, &mut app.history.list_state);
     }
 }

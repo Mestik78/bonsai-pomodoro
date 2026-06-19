@@ -62,8 +62,27 @@ pub fn render(frame: &mut Frame, app: &App, inner_area: Rect) {
     let tile_w = zoom_level.tile_width;
     let tile_h = zoom_level.tile_height;
     
-    let screen_width = map_area.width as usize;
-    let screen_height = map_area.height as usize;
+    let mut title_text = " View Mode ".to_string();
+    if state.is_searching {
+        title_text = format!(" /{}_ ", state.search_query);
+    } else if !state.search_matches.is_empty() {
+        title_text = format!(" Match {}/{} for '{}' (n to jump, Esc to clear) ", state.search_index + 1, state.search_matches.len(), state.search_query);
+    }
+    
+    let map_block = if !state.is_movement_mode {
+        Block::default()
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(if state.is_searching { Color::Yellow } else { Color::DarkGray }))
+            .title(title_text)
+    } else {
+        Block::default().borders(Borders::NONE)
+    };
+    
+    let inner_map_area = map_block.inner(map_area);
+    frame.render_widget(map_block, map_area);
+    
+    let screen_width = inner_map_area.width as usize;
+    let screen_height = inner_map_area.height as usize;
     
     if screen_width == 0 || screen_height == 0 {
         return;
@@ -78,11 +97,7 @@ pub fn render(frame: &mut Frame, app: &App, inner_area: Rect) {
     };
     
     let mut info_text = " Center a plant to view details ".to_string();
-    if state.is_searching {
-        info_text = format!(" /{}_ ", state.search_query);
-    } else if !state.search_matches.is_empty() {
-        info_text = format!(" Match {}/{} for '{}' (n to jump, Esc to clear) ", state.search_index + 1, state.search_matches.len(), state.search_query);
-    } else if let Some(idx) = selected_idx {
+    if let Some(idx) = selected_idx {
         let selected_timer = &app.timers[idx];
         let title = selected_timer.title.as_deref().unwrap_or("Unnamed Session");
         let date = match chrono::DateTime::parse_from_rfc3339(&selected_timer.start_time) {
@@ -98,12 +113,22 @@ pub fn render(frame: &mut Frame, app: &App, inner_area: Rect) {
                     Err(_) => t.start_time.clone(),
                 };
                 if d == date {
-                    total_duration += t.duration;
+                    total_duration += t.actual_runtime.unwrap_or(t.duration);
                 }
             }
         }
         
-        info_text = format!(" Plant: {} │ Date: {} │ Day Total: {:02}:{:02} ", title, date, total_duration / 60, total_duration % 60);
+        let total_mins = total_duration / 60;
+        let total_hours = total_mins / 60;
+        let rem_mins = total_mins % 60;
+        
+        let time_str = if total_hours > 0 {
+            format!("{}h {:02}m", total_hours, rem_mins)
+        } else {
+            format!("{}m", total_mins)
+        };
+        
+        info_text = format!(" Plant: {} │ Date: {} │ Day Total: {} ", title, date, time_str);
     }
 
     let info_p = Paragraph::new(info_text)
@@ -238,5 +263,5 @@ pub fn render(frame: &mut Frame, app: &App, inner_area: Rect) {
     let p = Paragraph::new(all_lines)
         .block(Block::default().borders(Borders::NONE));
         
-    frame.render_widget(p, map_area);
+    frame.render_widget(p, inner_map_area);
 }

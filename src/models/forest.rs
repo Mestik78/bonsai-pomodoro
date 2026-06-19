@@ -55,7 +55,7 @@ impl ForestState {
         }
     }
 
-    pub fn handle_event(&mut self, event: &TabEvent) -> EventResult {
+    pub fn handle_event(&mut self, event: &TabEvent, timers: &[crate::models::timer::TimerSession]) -> EventResult {
         if self.is_searching {
             match event {
                 TabEvent::Char(c) => {
@@ -70,11 +70,46 @@ impl ForestState {
                     self.search_matches.clear();
                     self.search_index = 0;
                     if !self.search_query.is_empty() {
-                        for (date, cx, cy) in &self.forest_map.day_blobs {
-                            if date.contains(&self.search_query) {
-                                self.search_matches.push((*cx, *cy));
+                        let query = self.search_query.to_lowercase();
+                        for (&(cx, cy), element) in &self.forest_map.grid {
+                            if let crate::models::forest_map::MapElement::Plant(idx) = element {
+                                let t = &timers[*idx];
+                                let mut matches = false;
+                                
+                                let date = match chrono::DateTime::parse_from_rfc3339(&t.start_time) {
+                                    Ok(dt) => dt.format("%Y-%m-%d").to_string(),
+                                    Err(_) => t.start_time.clone(),
+                                };
+                                
+                                if date.to_lowercase().contains(&query) {
+                                    matches = true;
+                                }
+                                if let Some(ref title) = t.title {
+                                    if title.to_lowercase().contains(&query) {
+                                        matches = true;
+                                    }
+                                }
+                                if let Some(ref desc) = t.description {
+                                    if desc.to_lowercase().contains(&query) {
+                                        matches = true;
+                                    }
+                                }
+                                
+                                if matches {
+                                    self.search_matches.push((cx, cy));
+                                }
                             }
                         }
+                        
+                        // Also search day blobs just in case
+                        for (date, cx, cy) in &self.forest_map.day_blobs {
+                            if date.to_lowercase().contains(&query) {
+                                if !self.search_matches.contains(&(*cx, *cy)) {
+                                    self.search_matches.push((*cx, *cy));
+                                }
+                            }
+                        }
+                        
                         if !self.search_matches.is_empty() {
                             let (cx, cy) = self.search_matches[0];
                             self.tilemap.camera_x = cx * (self.tilemap.zoom_levels[self.tilemap.current_zoom].tile_width as i32);
