@@ -16,20 +16,12 @@ pub struct BonsaiCell {
 
 pub struct BonsaiCanvas {
     pub cells: HashMap<(i32, i32), BonsaiCell>,
-    pub trunk_parts: Option<Vec<(String, Color)>>,
 }
 
 impl BonsaiCanvas {
     pub fn new() -> Self {
         Self {
             cells: HashMap::new(),
-            trunk_parts: Some(vec![
-                (".".to_string(), Color::Rgb(160, 82, 45)),
-                ("/".to_string(), Color::Rgb(160, 82, 45)),
-                ("~~~".to_string(), Color::Rgb(160, 82, 45)),
-                ("\\".to_string(), Color::Rgb(160, 82, 45)),
-                (".".to_string(), Color::Rgb(160, 82, 45)),
-            ]),
         }
     }
     
@@ -63,7 +55,18 @@ impl BonsaiCanvas {
                             ratatui::style::Style::default().fg(cell.color)
                         ));
                     } else {
-                        spans.push(ratatui::text::Span::raw(" "));
+                        if y == 0 && self.cells.len() > 1 {
+                            let pc = pot_color.unwrap_or(Color::DarkGray);
+                            if x == -15 || x == 15 {
+                                spans.push(ratatui::text::Span::styled(":", ratatui::style::Style::default().fg(pc)));
+                            } else if x > -15 && x < 15 {
+                                spans.push(ratatui::text::Span::styled("_", ratatui::style::Style::default().fg(Color::Green)));
+                            } else {
+                                spans.push(ratatui::text::Span::raw(" "));
+                            }
+                        } else {
+                            spans.push(ratatui::text::Span::raw(" "));
+                        }
                     }
                 }
                 lines.push(ratatui::text::Line::from(spans));
@@ -81,20 +84,6 @@ impl BonsaiCanvas {
             let mut pot_lines: Vec<Vec<(String, Color)>> = Vec::new();
             
             if !has_tree {
-                pot_lines.push(vec![
-                    (":".to_string(), color_text), ("_____________________________".to_string(), color_leaf), (":".to_string(), color_text)
-                ]);
-            } else if let Some(ref tp) = self.trunk_parts {
-                let mut line = vec![(":".to_string(), color_text)];
-                let tp_len: usize = tp.iter().map(|(s, _)| s.chars().count()).sum();
-                let side_len = (29_usize.saturating_sub(tp_len)) / 2;
-                let right_len = 29 - tp_len - side_len;
-                line.push(("_".repeat(side_len), color_leaf));
-                line.extend(tp.clone());
-                line.push(("_".repeat(right_len), color_leaf));
-                line.push((":".to_string(), color_text));
-                pot_lines.push(line);
-            } else {
                 pot_lines.push(vec![
                     (":".to_string(), color_text), ("_____________________________".to_string(), color_leaf), (":".to_string(), color_text)
                 ]);

@@ -5,12 +5,14 @@ use ratatui::style::Color;
 use crate::models::plant::Fruit;
 
 pub fn generate_pine(seed: u64, progress: f32, _fruit: Option<Fruit>, _fruit_quantity: u32) -> BonsaiCanvas {
+    let mut canvas = BonsaiCanvas::new();
+    if progress <= 0.0 { return canvas; }
+
     let mut dummy_canvas = BonsaiCanvas::new();
     let mut rng = StdRng::seed_from_u64(seed);
     let mut total_steps = 0;
     pine_tree(&mut dummy_canvas, &mut rng, 0, 0, &mut total_steps, i32::MAX);
     
-    let mut canvas = BonsaiCanvas::new();
     if progress > 0.0 {
         let mut rng = StdRng::seed_from_u64(seed);
         let mut steps = 0;

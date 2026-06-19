@@ -36,12 +36,12 @@ fn generate_mushroom_with_params(seed: u64, progress: f32, stem_range: std::ops:
     
     if current_stem == 0 && current_radius == 0 { return canvas; }
     
-    mushroom_tree(&mut canvas, &mut rng, 0, 0, current_stem, current_radius, cap_color, spot_color, spot_chance);
+    mushroom_tree(&mut canvas, seed, 0, 0, current_stem, current_radius, cap_color, spot_color, spot_chance);
     
     canvas
 }
 
-fn mushroom_tree(canvas: &mut BonsaiCanvas, rng: &mut StdRng, x: i32, mut y: i32, stem_height: i32, cap_radius: i32, cap_color: Color, spot_color: Color, spot_chance: f64) {
+fn mushroom_tree(canvas: &mut BonsaiCanvas, seed: u64, x: i32, mut y: i32, stem_height: i32, cap_radius: i32, cap_color: Color, spot_color: Color, spot_chance: f64) {
     let stem_color = Color::Rgb(245, 245, 220); // Beige
     
     // Stem
@@ -60,8 +60,10 @@ fn mushroom_tree(canvas: &mut BonsaiCanvas, rng: &mut StdRng, x: i32, mut y: i32
         let w = ((cap_f * cap_f) - (dy_f * 2.0 * dy_f * 2.0)).max(0.0).sqrt() as i32;
         
         for dx in -w..=w+1 {
-            let color = if rng.gen_bool(spot_chance) { spot_color } else { cap_color };
-            let ch = if color == spot_color { "o" } else { "@" };
+            let hash = seed.wrapping_add((dx as u64).wrapping_mul(131)).wrapping_add((dy as u64).wrapping_mul(71));
+            let is_spot = (hash % 100) < (spot_chance * 100.0) as u64;
+            let color = if is_spot { spot_color } else { cap_color };
+            let ch = if is_spot { "o" } else { "@" };
             let dist_sq = dx * dx + dy * dy;
             cap_pixels.push((x + dx, y - dy, ch, color, dist_sq));
         }

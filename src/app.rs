@@ -106,6 +106,8 @@ impl App {
         let state = AppState {
             timers: self.timers.clone(),
             global_seed: self.global_seed,
+            unknown_fields: std::collections::HashMap::new(),
+            raw_unparseable_backup: None,
         };
         state.save(self.is_production);
     }

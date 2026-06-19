@@ -16,22 +16,29 @@ impl Fruit {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq)]
 pub enum PlantType {
+    // Bonsai derivatives
     Bonsai,
+    Sakura,
     LemonTree,
     AppleTree,
     OrangeTree,
-    Cactus,
-    Bush,
-    Pine,
-    Bamboo,
+    // Oak derivatives
     Oak,
     RedMaple,
     WhiteBirch,
-    Willow,
+    // Mushroom derivatives
     Mushroom,
     TallMushroom,
     BrownMushroom,
-    Sakura,
+    // Unique plants
+    Pine,
+    Bamboo,
+    Willow,
+    Cactus,
+    Bush,
+    // Fallback
+    #[serde(untagged)]
+    Unknown(String),
 }
 
 impl Default for PlantType {
@@ -43,32 +50,32 @@ impl Default for PlantType {
 impl PlantType {
     pub fn all() -> Vec<PlantType> {
         vec![
-            PlantType::Bonsai, PlantType::Cactus, PlantType::LemonTree, 
-            PlantType::AppleTree, PlantType::OrangeTree, PlantType::Bush,
-            PlantType::Pine, PlantType::Bamboo, PlantType::Oak,
-            PlantType::RedMaple, PlantType::WhiteBirch, PlantType::Willow,
-            PlantType::Mushroom, PlantType::TallMushroom, PlantType::BrownMushroom, PlantType::Sakura
+            PlantType::Bonsai, PlantType::Sakura, PlantType::LemonTree, PlantType::AppleTree, PlantType::OrangeTree,
+            PlantType::Oak, PlantType::RedMaple, PlantType::WhiteBirch,
+            PlantType::Mushroom, PlantType::TallMushroom, PlantType::BrownMushroom,
+            PlantType::Pine, PlantType::Bamboo, PlantType::Willow, PlantType::Cactus, PlantType::Bush,
         ]
     }
     
     pub fn to_string(&self) -> String {
         match self {
             PlantType::Bonsai => "Bonsai".to_string(),
+            PlantType::Sakura => "Sakura".to_string(),
             PlantType::LemonTree => "Lemon Tree".to_string(),
             PlantType::AppleTree => "Apple Tree".to_string(),
             PlantType::OrangeTree => "Orange Tree".to_string(),
-            PlantType::Cactus => "Cactus".to_string(),
-            PlantType::Bush => "Bush".to_string(),
-            PlantType::Pine => "Pine Tree".to_string(),
-            PlantType::Bamboo => "Bamboo".to_string(),
             PlantType::Oak => "Oak Tree".to_string(),
             PlantType::RedMaple => "Red Maple".to_string(),
             PlantType::WhiteBirch => "White Birch".to_string(),
-            PlantType::Willow => "Weeping Willow".to_string(),
             PlantType::Mushroom => "Red Mushroom".to_string(),
             PlantType::TallMushroom => "Tall Mushroom".to_string(),
             PlantType::BrownMushroom => "Brown Mushroom".to_string(),
-            PlantType::Sakura => "Sakura".to_string(),
+            PlantType::Pine => "Pine Tree".to_string(),
+            PlantType::Bamboo => "Bamboo".to_string(),
+            PlantType::Willow => "Weeping Willow".to_string(),
+            PlantType::Cactus => "Cactus".to_string(),
+            PlantType::Bush => "Bush".to_string(),
+            PlantType::Unknown(s) => s.clone(),
         }
     }
 }
@@ -96,12 +103,9 @@ impl Plant {
 pub fn generate_plant(plant: &Plant) -> bonsai::canvas::BonsaiCanvas {
     match plant.plant_type {
         PlantType::Bonsai => bonsai::generate_bonsai(plant.seed, plant.progress, None, 0),
-        PlantType::Cactus => {
-            let flower = Fruit::new('✿', Color::Rgb(255, 20, 147));
-            bonsai::generate_cactus(plant.seed, plant.progress, Some(flower), 2)
-        },
-        PlantType::Bush => {
-            bonsai::generate_bush(plant.seed, plant.progress, None, 0)
+        PlantType::Sakura => {
+            let blossom = Fruit::new('*', Color::Rgb(255, 183, 197));
+            bonsai::generate_bonsai(plant.seed, plant.progress, Some(blossom), 80)
         },
         PlantType::LemonTree => {
             let lemon = Fruit::new('●', Color::Rgb(255, 244, 79));
@@ -115,18 +119,22 @@ pub fn generate_plant(plant: &Plant) -> bonsai::canvas::BonsaiCanvas {
             let orange = Fruit::new('●', Color::Rgb(255, 165, 0)); // Orange
             bonsai::generate_bonsai(plant.seed, plant.progress, Some(orange), 4)
         },
-        PlantType::Pine => bonsai::generate_pine(plant.seed, plant.progress, None, 0),
-        PlantType::Bamboo => bonsai::generate_bamboo(plant.seed, plant.progress, None, 0),
         PlantType::Oak => bonsai::generate_oak(plant.seed, plant.progress, None, 0),
         PlantType::RedMaple => bonsai::generate_red_maple(plant.seed, plant.progress, None, 0),
         PlantType::WhiteBirch => bonsai::generate_white_birch(plant.seed, plant.progress, None, 0),
-        PlantType::Willow => bonsai::generate_willow(plant.seed, plant.progress, None, 0),
         PlantType::Mushroom => bonsai::generate_mushroom(plant.seed, plant.progress, None, 0),
         PlantType::TallMushroom => bonsai::generate_tall_mushroom(plant.seed, plant.progress, None, 0),
         PlantType::BrownMushroom => bonsai::generate_brown_mushroom(plant.seed, plant.progress, None, 0),
-        PlantType::Sakura => {
-            let blossom = Fruit::new('*', Color::Rgb(255, 183, 197));
-            bonsai::generate_bonsai(plant.seed, plant.progress, Some(blossom), 80)
-        }
+        PlantType::Pine => bonsai::generate_pine(plant.seed, plant.progress, None, 0),
+        PlantType::Bamboo => bonsai::generate_bamboo(plant.seed, plant.progress, None, 0),
+        PlantType::Willow => bonsai::generate_willow(plant.seed, plant.progress, None, 0),
+        PlantType::Cactus => {
+            let flower = Fruit::new('✿', Color::Rgb(255, 20, 147));
+            bonsai::generate_cactus(plant.seed, plant.progress, Some(flower), 2)
+        },
+        PlantType::Bush => {
+            bonsai::generate_bush(plant.seed, plant.progress, None, 0)
+        },
+        PlantType::Unknown(_) => bonsai::generate_bonsai(plant.seed, plant.progress, None, 0),
     }
 }

@@ -15,9 +15,10 @@ pub fn render(frame: &mut Frame, app: &App, inner_area: Rect) {
     let active_timer = app.active_timer();
     let state_str = match active_timer.state {
         Some(TimerState::New) => "New",
-        Some(TimerState::Starting(_)) => "Starting...",
+        Some(TimerState::Starting(_)) => "Starting",
         Some(TimerState::Running) => "Running",
         Some(TimerState::Paused) => "Paused",
+        Some(TimerState::Unknown(_)) => "Unknown",
         None => "Finished",
     };
 
@@ -47,9 +48,10 @@ pub fn render(frame: &mut Frame, app: &App, inner_area: Rect) {
     let status_color = match app.mode {
         AppMode::Normal => match active_timer.state {
             Some(TimerState::New) => Color::Cyan,
-            Some(TimerState::Starting(_)) => Color::LightYellow,
+            Some(TimerState::Starting(_)) => Color::Yellow,
             Some(TimerState::Running) => Color::Green,
-            Some(TimerState::Paused) => Color::Yellow,
+            Some(TimerState::Paused) => Color::Gray,
+            Some(TimerState::Unknown(_)) => Color::Gray,
             None => Color::Red,
         },
         _ => Color::Yellow,

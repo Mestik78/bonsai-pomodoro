@@ -7,6 +7,8 @@ pub enum TimerState {
     Starting(String),
     Running,
     Paused,
+    #[serde(untagged)]
+    Unknown(serde_json::Value),
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -21,6 +23,7 @@ pub struct TimerSession {
     pub description: Option<String>,
     pub seed: u64,
     pub plant_type: PlantType,
+    pub unknown_fields: std::collections::HashMap<String, serde_json::Value>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -42,6 +45,8 @@ struct TimerSessionData {
     seed: Option<u64>,
     #[serde(default)]
     plant_type: PlantType,
+    #[serde(flatten)]
+    unknown_fields: std::collections::HashMap<String, serde_json::Value>,
 }
 
 impl From<TimerSessionData> for TimerSession {
@@ -64,6 +69,7 @@ impl From<TimerSessionData> for TimerSession {
             description: data.description,
             seed,
             plant_type: data.plant_type,
+            unknown_fields: data.unknown_fields,
         }
     }
 }
@@ -80,6 +86,7 @@ impl Into<TimerSessionData> for TimerSession {
             description: self.description,
             seed: Some(self.seed),
             plant_type: self.plant_type,
+            unknown_fields: self.unknown_fields,
         }
     }
 }
@@ -96,6 +103,7 @@ impl TimerSession {
             description: None,
             seed: 0,
             plant_type,
+            unknown_fields: std::collections::HashMap::new(),
         };
         
         let hash_seed = {

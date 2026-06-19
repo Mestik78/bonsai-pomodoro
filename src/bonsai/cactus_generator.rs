@@ -16,7 +16,6 @@ fn hash_2d(seed: u64, x: i32, y: i32) -> u64 {
 
 pub fn generate_cactus(seed: u64, progress: f32, fruit: Option<Fruit>, fruit_quantity: u32) -> BonsaiCanvas {
     let mut canvas = BonsaiCanvas::new();
-    canvas.trunk_parts = None;
     if progress <= 0.0 {
         return canvas;
     }
