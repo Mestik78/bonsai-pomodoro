@@ -3,7 +3,10 @@ use crossterm::event::{self, Event, KeyCode, KeyEventKind, KeyModifiers};
 use crate::app::{App, AppMode};
 
 pub fn handle_event(app: &mut App, tick_rate: Duration) -> io::Result<bool> {
-    if event::poll(tick_rate)? {
+    app.mouse_moved_this_frame = false;
+    app.mouse_click_pos = None;
+    let start = std::time::Instant::now();
+    while event::poll(tick_rate.saturating_sub(start.elapsed()))? {
         let ev = event::read()?;
         if let Event::Key(key) = ev {
             if key.kind == KeyEventKind::Press {
@@ -110,8 +113,6 @@ pub fn handle_event(app: &mut App, tick_rate: Duration) -> io::Result<bool> {
                                             app.finish_early();
                                         }
                                     },
-                                    KeyCode::Char('+') => { let _ = app.dispatch_event(crate::models::tabs::TabEvent::ZoomIn); },
-                                    KeyCode::Char('-') => { let _ = app.dispatch_event(crate::models::tabs::TabEvent::ZoomOut); },
                                     KeyCode::Char('/') => {
                                         if app.current_tab == crate::models::tabs::Tab::Forest || app.current_tab == crate::models::tabs::Tab::History {
                                             let _ = app.dispatch_event(crate::models::tabs::TabEvent::SearchStart);
@@ -153,7 +154,13 @@ pub fn handle_event(app: &mut App, tick_rate: Duration) -> io::Result<bool> {
                 }
             }
         } else if let Event::Mouse(mouse_event) = ev {
+            let prev_pos = app.mouse_pos;
+            if prev_pos != Some((mouse_event.column, mouse_event.row)) {
+                app.mouse_moved_this_frame = true;
+            }
+            app.mouse_pos = Some((mouse_event.column, mouse_event.row));
             if mouse_event.kind == crossterm::event::MouseEventKind::Down(crossterm::event::MouseButton::Left) {
+                app.mouse_dragged = false;
                 if mouse_event.row == 0 {
                     let mut current_x = 0;
                     for (i, title) in app.tab_titles.iter().enumerate() {
@@ -165,7 +172,89 @@ pub fn handle_event(app: &mut App, tick_rate: Duration) -> io::Result<bool> {
                         current_x += width + 1;
                     }
                 }
+            } else if mouse_event.kind == crossterm::event::MouseEventKind::Drag(crossterm::event::MouseButton::Left) {
+                app.mouse_dragged = true;
+                if app.current_tab == crate::models::tabs::Tab::Forest || app.current_tab == crate::models::tabs::Tab::History {
+                    if let Some((px, py)) = prev_pos {
+                        let dx = mouse_event.column as i32 - px as i32;
+                        let dy = mouse_event.row as i32 - py as i32;
+                        if dx != 0 || dy != 0 {
+                            let _ = app.dispatch_event(crate::models::tabs::TabEvent::MouseDrag { dx, dy });
+                        }
+                    }
+                }
+            } else if mouse_event.kind == crossterm::event::MouseEventKind::ScrollUp {
+                if app.current_tab == crate::models::tabs::Tab::Forest {
+                    if app.last_zoom_time.elapsed() > Duration::from_millis(150) {
+                        app.last_zoom_time = std::time::Instant::now();
+                        let offset = if let Some((x, y, w, h)) = app.forest.last_map_area.get() {
+                            if mouse_event.column >= x && mouse_event.column < x + w && mouse_event.row >= y && mouse_event.row < y + h {
+                                let rel_x = (mouse_event.column - x) as i32;
+                                let rel_y = (mouse_event.row - y) as i32;
+                                let offset_x = rel_x - (w as i32) / 2;
+                                let offset_y = (h as i32) / 2 - rel_y;
+                                Some((offset_x, offset_y))
+                            } else { None }
+                        } else { None };
+                        let _ = app.dispatch_event(crate::models::tabs::TabEvent::ZoomIn { offset });
+                    }
+                } else if app.current_tab == crate::models::tabs::Tab::History || app.current_tab == crate::models::tabs::Tab::Plants {
+                    if app.last_zoom_time.elapsed() > Duration::from_millis(40) {
+                        app.last_zoom_time = std::time::Instant::now();
+                        let _ = app.dispatch_event(crate::models::tabs::TabEvent::Up { is_ctrl: false });
+                    }
+                }
+            } else if mouse_event.kind == crossterm::event::MouseEventKind::ScrollDown {
+                if app.current_tab == crate::models::tabs::Tab::Forest {
+                    if app.last_zoom_time.elapsed() > Duration::from_millis(150) {
+                        app.last_zoom_time = std::time::Instant::now();
+                        let offset = if let Some((x, y, w, h)) = app.forest.last_map_area.get() {
+                            if mouse_event.column >= x && mouse_event.column < x + w && mouse_event.row >= y && mouse_event.row < y + h {
+                                let rel_x = (mouse_event.column - x) as i32;
+                                let rel_y = (mouse_event.row - y) as i32;
+                                let offset_x = rel_x - (w as i32) / 2;
+                                let offset_y = (h as i32) / 2 - rel_y;
+                                Some((offset_x, offset_y))
+                            } else { None }
+                        } else { None };
+                        let _ = app.dispatch_event(crate::models::tabs::TabEvent::ZoomOut { offset });
+                    }
+                } else if app.current_tab == crate::models::tabs::Tab::History || app.current_tab == crate::models::tabs::Tab::Plants {
+                    if app.last_zoom_time.elapsed() > Duration::from_millis(40) {
+                        app.last_zoom_time = std::time::Instant::now();
+                        let _ = app.dispatch_event(crate::models::tabs::TabEvent::Down { is_ctrl: false });
+                    }
+                }
+            } else if mouse_event.kind == crossterm::event::MouseEventKind::Up(crossterm::event::MouseButton::Left) {
+                if !app.mouse_dragged && mouse_event.row != 0 {
+                    app.mouse_click_pos = Some((mouse_event.column, mouse_event.row));
+                    let res = app.dispatch_event(crate::models::tabs::TabEvent::Enter);
+                    match res {
+                        crate::models::tabs::EventResult::Ignored => {
+                            if app.current_tab == crate::models::tabs::Tab::Plants {
+                                app.plants.toggle_animation();
+                            } else if app.current_tab != crate::models::tabs::Tab::Timer || !app.is_selecting_plant {
+                                app.toggle_timer();
+                            }
+                        },
+                        crate::models::tabs::EventResult::JumpToForest(idx) => {
+                            app.history.escape();
+                            app.current_tab = crate::models::tabs::Tab::Forest;
+                            app.forest.center_on_timer(idx);
+                        },
+                        crate::models::tabs::EventResult::JumpToHistory(idx) => {
+                            app.current_tab = crate::models::tabs::Tab::History;
+                            app.history.select_timer(idx, &app.timers);
+                        },
+                        _ => {}
+                    }
+                }
+                app.mouse_dragged = false;
             }
+        }
+        
+        if !event::poll(Duration::from_secs(0))? {
+            break;
         }
     }
 

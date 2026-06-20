@@ -34,6 +34,11 @@ pub struct App {
     pub forest: ForestState,
     pub stats: StatsState,
     pub plants: PlantsState,
+    pub mouse_pos: Option<(u16, u16)>,
+    pub mouse_moved_this_frame: bool,
+    pub mouse_click_pos: Option<(u16, u16)>,
+    pub mouse_dragged: bool,
+    pub last_zoom_time: std::time::Instant,
 }
 
 impl App {
@@ -99,6 +104,11 @@ impl App {
             forest,
             stats,
             plants,
+            mouse_pos: None,
+            mouse_moved_this_frame: false,
+            mouse_click_pos: None,
+            mouse_dragged: false,
+            last_zoom_time: std::time::Instant::now(),
         }
     }
 

@@ -19,6 +19,17 @@ pub fn render(frame: &mut Frame, app: &mut App, inner_area: Rect) {
         .constraints([Constraint::Length(prev_width), Constraint::Length(list_width)])
         .split(inner_area);
     
+    let list_rect = chunks[0];
+    if let Some((mx, my)) = app.mouse_click_pos {
+        if mx >= list_rect.x && mx < list_rect.x + list_rect.width &&
+           my >= list_rect.y && my < list_rect.y + list_rect.height {
+            let rel_y = my as usize - list_rect.y as usize + app.stats.list_state.offset();
+            if rel_y < 4 { // 4 options
+                app.stats.list_state.select(Some(rel_y));
+            }
+        }
+    }
+
     let mut items = Vec::new();
     let options = ["Daily", "Weekly", "Monthly", "Heatmap"];
     for (i, opt) in options.iter().enumerate() {

@@ -196,7 +196,7 @@ impl HistoryState {
                     }
                     if consumed { EventResult::Consumed } else { EventResult::Ignored }
                 },
-                TabEvent::ZoomIn | TabEvent::ZoomOut => EventResult::Ignored,
+                TabEvent::ZoomIn { .. } | TabEvent::ZoomOut { .. } => EventResult::Ignored,
                 _ => EventResult::Ignored,
             }
         }

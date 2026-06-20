@@ -20,6 +20,8 @@ pub struct ForestState {
     #[serde(skip)]
     pub is_movement_mode: bool,
     #[serde(skip)]
+    pub last_map_area: std::cell::Cell<Option<(u16, u16, u16, u16)>>,
+    #[serde(skip)]
     pub tile_cache: std::cell::RefCell<std::collections::HashMap<(i32, i32, usize, bool), Vec<ratatui::text::Line<'static>>>>,
 }
 
@@ -33,6 +35,7 @@ impl ForestState {
             search_matches: Vec::new(),
             search_index: 0,
             is_movement_mode: false,
+            last_map_area: std::cell::Cell::new(None),
             tile_cache: std::cell::RefCell::new(std::collections::HashMap::new()),
         }
     }
@@ -177,8 +180,13 @@ impl ForestState {
                         EventResult::Consumed
                     }
                 },
-                TabEvent::ZoomIn => { self.tilemap.zoom_in(); EventResult::Consumed },
-                TabEvent::ZoomOut => { self.tilemap.zoom_out(); EventResult::Consumed },
+                TabEvent::ZoomIn { offset } => { self.tilemap.zoom_in(*offset); EventResult::Consumed },
+                TabEvent::ZoomOut { offset } => { self.tilemap.zoom_out(*offset); EventResult::Consumed },
+                TabEvent::MouseDrag { dx, dy } => {
+                    self.is_movement_mode = true;
+                    self.tilemap.pan(-*dx, *dy); // dy está invertido para natural dragging
+                    EventResult::Consumed
+                },
                 TabEvent::Esc => { 
                     let mut consumed = false;
                     if !self.search_matches.is_empty() {

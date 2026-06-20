@@ -56,7 +56,16 @@ pub fn render(frame: &mut Frame, app: &mut App, inner_area: Rect) {
     let mut items = Vec::new();
     let mut target_line_idx = 0;
     let mut current_line: usize = 0;
-    
+    let mut hovered_selection = None;
+    let hovered_line = if app.mouse_moved_this_frame {
+        if let Some((mx, my)) = app.mouse_pos {
+            if mx >= history_area.x && mx < history_area.x + history_area.width && my >= history_area.y && my < history_area.y + history_area.height {
+                Some(my as usize - history_area.y as usize + app.history.list_state.offset())
+            } else { None }
+        } else { None }
+    } else { None };
+    let mx = app.mouse_pos.map(|p| p.0).unwrap_or(0);
+
     let available_width = if app.history.level == HistoryLevel::Bonsai {
         let base_width = (history_area.width as f32 * 0.50) as u16;
         let prev_width = base_width.clamp(10, crate::bonsai::scale::SCALES[0].min_width + 10);
@@ -100,7 +109,9 @@ pub fn render(frame: &mut Frame, app: &mut App, inner_area: Rect) {
         let header_len = left_dashes + title_text.chars().count() + time_str.chars().count();
         let dashes_len = available_width.saturating_sub(header_len);
         title_spans.push(Span::styled("─".repeat(dashes_len), title_style));
-        
+        if hovered_line == Some(current_line) {
+            hovered_selection = Some((day_idx, None));
+        }
         items.push(ListItem::new(Line::from(title_spans)));
         current_line += 1;
         
@@ -173,6 +184,18 @@ pub fn render(frame: &mut Frame, app: &mut App, inner_area: Rect) {
                 }
             }
             
+            let block_start = current_line;
+            let block_end = current_line + max_height.saturating_sub(1);
+            if let Some(hl) = hovered_line {
+                if hl >= block_start && hl <= block_end {
+                    let rel_x = mx.saturating_sub(history_area.x) as usize;
+                    let col_idx = rel_x / block_width;
+                    if col_idx < row_chunk.len() {
+                        hovered_selection = Some((day_idx, Some(row_idx * cols + col_idx)));
+                    }
+                }
+            }
+            
             for i in 0..max_height {
                 let mut combined_spans = Vec::new();
                 for block in row_chunk.iter() {
@@ -212,6 +235,16 @@ pub fn render(frame: &mut Frame, app: &mut App, inner_area: Rect) {
     }
     
     app.history.list_state.select(Some(target_line_idx));
+    if let Some((day_idx, bonsai_idx_opt)) = hovered_selection {
+        app.history.selected_day = day_idx;
+        if let Some(b_idx) = bonsai_idx_opt {
+            app.history.level = HistoryLevel::Bonsai;
+            app.history.selected_bonsai = b_idx;
+        } else {
+            app.history.level = HistoryLevel::Day;
+        }
+    }
+
     let list = List::new(items)
         .block(Block::default())
         .style(Style::default().fg(Color::White));

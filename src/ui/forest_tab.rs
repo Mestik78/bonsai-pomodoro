@@ -81,6 +81,8 @@ pub fn render(frame: &mut Frame, app: &App, inner_area: Rect) {
     let inner_map_area = map_block.inner(map_area);
     frame.render_widget(map_block, map_area);
     
+    state.last_map_area.set(Some((inner_map_area.x, inner_map_area.y, inner_map_area.width, inner_map_area.height)));
+    
     let screen_width = inner_map_area.width as usize;
     let screen_height = inner_map_area.height as usize;
     
@@ -91,7 +93,35 @@ pub fn render(frame: &mut Frame, app: &App, inner_area: Rect) {
     let center_col = (map.camera_x + (tile_w as i32) / 2).div_euclid(tile_w as i32);
     let center_row = (map.camera_y + (tile_h as i32) / 2).div_euclid(tile_h as i32);
     
-    let selected_idx = match state.forest_map.grid.get(&(center_col, center_row)) {
+    let start_x = map.camera_x - (screen_width as i32) / 2;
+    let start_y = map.camera_y + (screen_height as i32) / 2;
+    
+    let logical_start_x = start_x + (tile_w as i32) / 2;
+    let logical_start_y = start_y + (tile_h as i32) / 2;
+
+    let mut hovered_col_row = None;
+    let mut is_mouse_over_map = false;
+    if let Some((mx, my)) = app.mouse_pos {
+        if mx >= inner_map_area.x && mx < inner_map_area.x + inner_map_area.width &&
+           my >= inner_map_area.y && my < inner_map_area.y + inner_map_area.height {
+            is_mouse_over_map = true;
+            let rel_x = (mx - inner_map_area.x) as i32;
+            let rel_y = (my - inner_map_area.y) as i32;
+            let abs_y = logical_start_y - rel_y;
+            let map_row = abs_y.div_euclid(tile_h as i32);
+            let abs_x = logical_start_x + rel_x;
+            let map_col = abs_x.div_euclid(tile_w as i32);
+            hovered_col_row = Some((map_col, map_row));
+        }
+    }
+    
+    let target_col_row = if is_mouse_over_map {
+        hovered_col_row.unwrap()
+    } else {
+        (center_col, center_row)
+    };
+
+    let selected_idx = match state.forest_map.grid.get(&target_col_row) {
         Some(crate::models::forest_map::MapElement::Plant(idx)) => Some(*idx),
         _ => None,
     };
@@ -136,12 +166,6 @@ pub fn render(frame: &mut Frame, app: &App, inner_area: Rect) {
         .alignment(Alignment::Center);
     frame.render_widget(info_p, info_area);
 
-    let start_x = map.camera_x - (screen_width as i32) / 2;
-    let start_y = map.camera_y + (screen_height as i32) / 2;
-    
-    let logical_start_x = start_x + (tile_w as i32) / 2;
-    let logical_start_y = start_y + (tile_h as i32) / 2;
-    
     let start_col = logical_start_x.div_euclid(tile_w as i32);
     let end_col = (logical_start_x + screen_width as i32 - 1).div_euclid(tile_w as i32);
     
@@ -156,8 +180,7 @@ pub fn render(frame: &mut Frame, app: &App, inner_area: Rect) {
     
     for row in min_row..=max_row {
         for col in start_col..=end_col {
-            let is_center = col == (map.camera_x + (tile_w as i32) / 2).div_euclid(tile_w as i32)
-                         && row == (map.camera_y + (tile_h as i32) / 2).div_euclid(tile_h as i32);
+            let is_center = col == target_col_row.0 && row == target_col_row.1;
                          
             let cache_key = (col, row, map.current_zoom, is_center);
             

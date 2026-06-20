@@ -91,7 +91,7 @@ impl ForestMap {
                 let r_sq = bx*bx + by*by;
                 if r_sq > max_r_sq { max_r_sq = r_sq; }
             }
-            let r_new = (max_r_sq as f32).sqrt().ceil() as i32 + 1; // +1 for path border padding
+            let r_new = (max_r_sq as f32).sqrt().ceil() as i32; // Sin padding para mayor compactación
             
             let mut current_blob_x = 0;
             let mut current_blob_y = 0;
@@ -109,7 +109,7 @@ impl ForestMap {
                     let parent = &placed_blobs[parent_idx];
                     
                     let theta: f32 = rng_topo.gen_range(0.0..std::f32::consts::TAU);
-                    let d = rng_topo.gen_range(1..=3) + extra_distance;
+                    let d = 1 + extra_distance;
                     let target_r = parent.r + r_new + d;
                     
                     let test_cx = parent.cx + (target_r as f32 * theta.cos()).round() as i32;
@@ -134,7 +134,7 @@ impl ForestMap {
                     } else {
                         tries += 1;
                         if tries > 20 {
-                            extra_distance += 2;
+                            extra_distance += 1;
                             tries = 0;
                         }
                     }

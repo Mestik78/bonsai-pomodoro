@@ -48,12 +48,13 @@ pub enum TabEvent {
     Right,
     Enter,
     Esc,
-    ZoomIn,
-    ZoomOut,
+    ZoomIn { offset: Option<(i32, i32)> },
+    ZoomOut { offset: Option<(i32, i32)> },
     SearchStart,
     SearchNext,
     Char(char),
     Backspace,
+    MouseDrag { dx: i32, dy: i32 },
 }
 
 pub enum EventResult {

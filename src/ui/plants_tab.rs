@@ -101,6 +101,25 @@ pub fn render(frame: &mut Frame, app: &mut App, area: Rect) {
     let cols = (available_width / block_width).max(1);
     state.cols = cols;
 
+    let row_height_calc = target_tree_height + 1;
+    if app.mouse_moved_this_frame {
+        if let Some((mx, my)) = app.mouse_pos {
+            if mx >= top_right_inner.x && mx < top_right_inner.x + top_right_inner.width &&
+               my >= top_right_inner.y && my < top_right_inner.y + top_right_inner.height {
+                let rel_y = (my - top_right_inner.y) as usize + state.scroll_y;
+                let hovered_row = rel_y / row_height_calc;
+                let rel_x = (mx - top_right_inner.x) as usize;
+                let hovered_col = rel_x / block_width;
+                
+                let hovered_idx = hovered_row * cols + hovered_col;
+                if hovered_idx < state.plant_types.len() {
+                    state.selected_index = hovered_idx;
+                    state.is_selecting = true;
+                }
+            }
+        }
+    }
+
     let mut plant_blocks: Vec<Vec<Line>> = Vec::new();
 
     for (i, (_, p_type)) in state.plant_types.iter().enumerate() {
