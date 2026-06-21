@@ -182,6 +182,28 @@ impl App {
             self.history.update_cache(&self.timers);
             self.forest.rebuild_map(&self.timers, self.global_seed);
         }
+
+        // Exportar estado para Waybar en tmpfs
+        let status = if let Some(state) = &self.timers[0].state {
+            match state {
+                crate::models::timer::TimerState::Running => {
+                    let secs = self.timers[0].time_left.unwrap_or(0);
+                    format!("{:02}:{:02}", secs / 60, secs % 60)
+                },
+                crate::models::timer::TimerState::Paused => {
+                    let secs = self.timers[0].time_left.unwrap_or(0);
+                    format!("{:02}:{:02}", secs / 60, secs % 60)
+                },
+                crate::models::timer::TimerState::Starting(_) | crate::models::timer::TimerState::New => {
+                    let secs = self.timers[0].duration;
+                    format!("{:02}:{:02}", secs / 60, secs % 60)
+                },
+                _ => String::from(""),
+            }
+        } else {
+            String::from("")
+        };
+        let _ = std::fs::write("/tmp/bonsai_status", status);
     }
 
     pub fn next_tab(&mut self) {

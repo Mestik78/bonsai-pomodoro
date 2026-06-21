@@ -200,6 +200,8 @@ fn main() -> io::Result<()> {
         println!("{:?}", err);
     }
 
+    let _ = std::fs::remove_file("/tmp/bonsai_status");
+
     Ok(())
 }
 
